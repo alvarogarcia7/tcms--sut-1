@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Puts the tcms-cli tools in tools/ for the pipeline.
+# Downloads the tcms-cli Linux x64 binaries from a GitLab release package and installs
+# them with the schemas they need, into tools/ for the pipeline.
 #
-# 1. Prebuilt: the newest tcms-cli release with a linux-amd64 zip whose version is at
-#    least TCMS_CLI_MIN_VERSION. The binaries come from the zip; schemas/ and data/ come
-#    from the same tag (tcms-cli needs them at run time and the zip does not ship them).
-# 2. Fallback: clone TCMS_CLI_REF and build it from source.
-# If both fail the script exits non-zero and the pipeline stops.
+# Tags are tried in TCMS_CLI_TAGS order; the first one whose binaries install and run wins.
+# For each tag:
+#   tools/bin/<tool>             test-executor, verifier, validate-yaml (from the zip)
+#   tools/tcms-cli/schemas/      tcms-cli schemas (from the tag's repository archive)
+#   tools/tcms-cli/data/...      result container schema (from the tag's repository archive)
+# If no tag works the script exits non-zero and the pipeline stops.
 #
 # Environment:
-#   TCMS_CLI_API          GitLab API root (default https://gitlab.crypto.tii.ae/api/v4)
-#   TCMS_CLI_PROJECT_ID   tcms-cli project id (default 361)
-#   TCMS_CLI_MIN_VERSION  minimum prebuilt version, X.Y.Z (default 0.0.2)
-#   TCMS_CLI_REF          tag built from source when no prebuilt qualifies (default v0.0.2-rc1)
-#   TCMS_CLI_URL          tcms-cli clone URL (used by the fallback)
-#   TCMS_READ_TOKEN       optional read_api token; otherwise CI_JOB_TOKEN is sent as JOB-TOKEN
+#   TCMS_CLI_API         GitLab API root (default https://gitlab.crypto.tii.ae/api/v4)
+#   TCMS_CLI_PROJECT_ID  tcms-cli project id (default 361)
+#   TCMS_CLI_TAGS        space-separated tags to try, in order
+#   TCMS_READ_TOKEN      optional read_api token; otherwise CI_JOB_TOKEN is sent as JOB-TOKEN
 set -euo pipefail
 
 if [ -n "${TCMS_READ_TOKEN:-}" ]; then
@@ -23,103 +23,60 @@ else
 fi
 API="${TCMS_CLI_API:-https://gitlab.crypto.tii.ae/api/v4}"
 PROJECT="${TCMS_CLI_PROJECT_ID:-361}"
-MIN="${TCMS_CLI_MIN_VERSION:-0.0.2}"
-REF="${TCMS_CLI_REF:-v0.0.2-rc1}"
-URL="${TCMS_CLI_URL:-https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli.git}"
+TAGS="${TCMS_CLI_TAGS:-v0.0.2-rc1-MR28-tcms40-glossary-impl_2 v0.0.2-rc1-MR28-tcms40-glossary-impl}"
+REQUIRED_BINS="test-executor verifier validate-yaml"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
-mkdir -p tools/bin tools/tcms-cli tools/download
 
-# Finds the newest qualifying release. Prints "TAG<TAB>ZIP_URL" or nothing.
-select_release() {
-  local json
-  json="$(curl -sSf -H "$AUTH_HEADER" "$API/projects/$PROJECT/releases?per_page=100")"
-  printf '%s' "$json" | jq -r --arg min "$MIN" '
-    def ver: capture("^v?(?<a>[0-9]+)\\.(?<b>[0-9]+)\\.(?<c>[0-9]+)")
-      | [(.a|tonumber), (.b|tonumber), (.c|tonumber)];
-    ($min | split(".") | map(tonumber)) as $minv
-    | [ .[]
-        | . as $r
-        | (try ($r.tag_name | ver) catch null) as $v
-        | select($v != null and $v >= $minv)
-        | ([$r.assets.links[]? | select(.name | endswith("linux-amd64.zip"))] | first) as $zip
-        | select($zip != null)
-        | {v: $v, tag: $r.tag_name, url: $zip.url} ]
-    | sort_by(.v) | reverse | first
-    | if . == null then empty else "\(.tag)\t\(.url)" end
-  ' || true
-}
+install_tag() {
+  local tag="$1"
+  local zip="tools/download/testcase-manager-$tag-linux-amd64.zip"
+  local url="$API/projects/$PROJECT/packages/generic/testcase-manager/$tag/testcase-manager-$tag-linux-amd64.zip"
 
-fetch_prebuilt() {
-  local selected tag url zip
-  selected="$(select_release)"
-  if [ -z "$selected" ]; then
-    echo "prebuilt: no linux-amd64 release at or above $MIN"
-    return 1
-  fi
-  tag="${selected%%$'\t'*}"
-  url="${selected#*$'\t'}"
-  echo "prebuilt: using $tag"
-
-  zip="tools/download/tcms-cli-$tag-linux-amd64.zip"
+  echo "download: $tag"
+  rm -rf tools/download tools/bin tools/tcms-cli
+  mkdir -p tools/download/extract tools/bin tools/tcms-cli/data
   curl -sSfL -H "$AUTH_HEADER" -o "$zip" "$url"
-  rm -rf tools/download/extract && mkdir -p tools/download/extract
+
   if command -v unzip >/dev/null 2>&1; then
     unzip -oq "$zip" -d tools/download/extract
   else
     python3 -m zipfile -e "$zip" tools/download/extract
   fi
-  # The pipeline needs these three. Older releases name or omit the others (v0.0.1-rc2 has
-  # no tcms binary), so only these are required.
-  for bin in test-executor verifier validate-yaml; do
-    [ -f "tools/download/extract/$bin" ] || { echo "prebuilt: $bin missing from $zip"; return 1; }
+  for bin in $REQUIRED_BINS; do
+    [ -f "tools/download/extract/$bin" ] || { echo "  $bin missing from the zip"; return 1; }
     cp "tools/download/extract/$bin" tools/bin/
     chmod +x "tools/bin/$bin"
   done
 
-  # Schemas and result-container data from the same tag, without a full clone.
+  # Schemas and the result container schema from the same tag, without a full clone.
   for path in schemas data/testcase_results_container; do
     curl -sSfL -H "$AUTH_HEADER" \
       "$API/projects/$PROJECT/repository/archive.tar.gz?sha=$tag&path=$path" \
       | tar -xz -C tools/download --strip-components=1
   done
-  rm -rf tools/tcms-cli/schemas tools/tcms-cli/data
-  mkdir -p tools/tcms-cli/data
   mv tools/download/schemas tools/tcms-cli/schemas
   mv tools/download/data/testcase_results_container tools/tcms-cli/data/
-  rm -rf tools/download/data
-  echo "prebuilt: $tag installed"
-}
+  [ -f tools/tcms-cli/data/testcase_results_container/schema.json ] \
+    || { echo "  result container schema missing for $tag"; return 1; }
 
-build_from_source() {
-  echo "source: building $REF"
-  scripts/clone-repo.sh "$URL" "$REF" tools/src/tcms-cli
-  (
-    cd tools/src/tcms-cli
-    cargo build --release -p tcms -p verifier -p test-executor -p validate-yaml
-  )
-  # Ask cargo where the target dir is: CARGO_TARGET_DIR may point elsewhere.
-  target_dir="$(cd tools/src/tcms-cli && cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')"
-  for bin in tcms verifier test-executor validate-yaml; do
-    cp "$target_dir/release/$bin" tools/bin/
+  # A tool that does not start, or lacks the flags the suite uses, fails the tag.
+  for bin in $REQUIRED_BINS; do
+    "tools/bin/$bin" --version
   done
-  rm -rf tools/tcms-cli/schemas tools/tcms-cli/data
-  mkdir -p tools/tcms-cli/data
-  cp -R tools/src/tcms-cli/schemas tools/tcms-cli/
-  cp -R tools/src/tcms-cli/data/testcase_results_container tools/tcms-cli/data/
-  echo "source: $REF built"
+  tools/bin/verifier --help | grep -q -- '--test-run' \
+    || { echo "  verifier for $tag has no --test-run flag"; return 1; }
+  echo "installed: $tag"
 }
 
-if fetch_prebuilt; then
-  :
-elif build_from_source; then
-  :
-else
-  echo "error: neither a prebuilt release nor a source build of $REF worked" >&2
-  exit 1
-fi
-
-for bin in test-executor verifier validate-yaml; do
-  "tools/bin/$bin" --version
+for tag in $TAGS; do
+  if install_tag "$tag"; then
+    rm -rf tools/download
+    exit 0
+  fi
+  echo "download: $tag did not install, trying the next tag"
 done
+
+echo "error: no tag in TCMS_CLI_TAGS ($TAGS) installed tcms-cli" >&2
+exit 1

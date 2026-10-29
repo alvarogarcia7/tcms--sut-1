@@ -12,7 +12,6 @@ stages:
 variables:
   # tcms-cli release whose binaries are built from source (the v0.0.2-rc1 release only
   # ships a macOS binary, so the Linux tools are built here from the same tag).
-  TCMS_CLI_REF: v0.0.2-rc1
   TCMS_CLI_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli.git
   # tcms-schemas revision used to validate the records.
   TCMS_SCHEMAS_REF: main
@@ -24,19 +23,13 @@ variables:
 
 build-tcms:
   stage: build-tcms
-  # rust:1.95 gives the glibc the tcms binaries need (see the test job).
+  # rust:1.95 gives the glibc (2.39) the tcms-cli binaries need (see the test job).
   image: rust:1.95
   variables:
-    CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
-    TCMS_CLI_MIN_VERSION: "0.0.2"
-    TCMS_CLI_REF: "v0.0.2-rc1"
-  cache:
-    key: tcms-cli-source-$TCMS_CLI_REF
-    paths:
-      - .cargo/
-      - tools/src/tcms-cli/target/
+    # Tags tried in order; the first whose Linux x64 binaries install wins.
+    TCMS_CLI_TAGS: "v0.0.2-rc1-MR28-tcms40-glossary-impl_2 v0.0.2-rc1-MR28-tcms40-glossary-impl"
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends pkg-config libssl-dev unzip jq curl > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip jq curl > /dev/null
   script:
     - scripts/fetch-tcms-cli.sh
   artifacts:
