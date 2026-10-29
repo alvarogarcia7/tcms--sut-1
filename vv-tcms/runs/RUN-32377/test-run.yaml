@@ -1,0 +1,15 @@
+type: test_run
+schema: tcms/test-run.schema.json
+run_id: RUN-32377
+build_id: 761e8651
+environment: SUT 1 (bash) on Linux x86_64
+tester: alvarogarcia8110
+started_at: "2026-10-29T07:42:17Z"
+finished_at: "2026-10-29T07:42:17Z"
+results:
+- test_case_id: SUT1_PASS_001
+  verdict: pass
+  verification_result_ref: build/runs/RUN-32377/verification-results.yaml#SUT1_PASS_001
+- test_case_id: SUT1_CALC_001
+  verdict: pass
+  verification_result_ref: build/runs/RUN-32377/verification-results.yaml#SUT1_CALC_001
