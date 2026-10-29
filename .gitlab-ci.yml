@@ -78,7 +78,9 @@ publish:
     - job: test
       artifacts: true
   rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    # Publish commits trigger a pipeline too (no [skip ci]); that one runs the tests but does
+    # not publish again, so a run never starts a new run.
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE !~ /^vv-tcms: publish/'
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
     - pip install -q --no-cache-dir pyyaml
@@ -94,7 +96,7 @@ publish:
         git reset -q --hard FETCH_HEAD
         scripts/publish-results.sh "$TCMS_RUN_ID"
         git add vv-tcms
-        git commit -q -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"
+        git commit -q -m "vv-tcms: publish $TCMS_RUN_ID"
         if git push -q "$remote" "HEAD:${CI_DEFAULT_BRANCH}"; then
           exit 0
         fi
