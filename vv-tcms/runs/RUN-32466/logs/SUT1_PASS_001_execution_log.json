@@ -1,0 +1,32 @@
+[
+  {
+    "test_sequence": 1,
+    "step": 1,
+    "command": "bash src/sut1/passcheck.sh Secret123",
+    "exit_code": 0,
+    "output": "strong",
+    "timestamp": "2026-10-29T12:42:57.060241623+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  },
+  {
+    "test_sequence": 2,
+    "step": 1,
+    "command": "bash src/sut1/passcheck.sh abc",
+    "exit_code": 1,
+    "output": "weak: too short",
+    "timestamp": "2026-10-29T12:42:57.070517859+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  },
+  {
+    "test_sequence": 2,
+    "step": 2,
+    "command": "bash src/sut1/passcheck.sh secret123",
+    "exit_code": 1,
+    "output": "weak: no uppercase letter",
+    "timestamp": "2026-10-29T12:42:57.081516623+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  }
+]
