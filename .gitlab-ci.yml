@@ -53,7 +53,8 @@ build-tcms:
 
 test:
   stage: test
-  image: debian:bookworm-slim
+  # Same image as build-tcms: the tcms binaries need the newer glibc in it.
+  image: rust:1.95
   needs: [build-tcms]
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq bash ca-certificates > /dev/null
