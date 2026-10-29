@@ -24,31 +24,25 @@ variables:
 
 build-tcms:
   stage: build-tcms
+  # rust:1.95 gives the glibc the tcms binaries need (see the test job).
   image: rust:1.95
   variables:
     CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+    TCMS_CLI_MIN_VERSION: "0.0.2"
+    TCMS_CLI_REF: "v0.0.2-rc1"
   cache:
-    key: tcms-cli-$TCMS_CLI_REF
+    key: tcms-cli-source-$TCMS_CLI_REF
     paths:
       - .cargo/
-      - tcms-cli-src/target/
+      - tools/src/tcms-cli/target/
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends pkg-config libssl-dev > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends pkg-config libssl-dev unzip jq curl > /dev/null
   script:
-    - scripts/clone-repo.sh "$TCMS_CLI_URL" "$TCMS_CLI_REF" tcms-cli-src
-    - cd tcms-cli-src
-    - cargo build --release -p tcms -p verifier -p test-executor -p validate-yaml
-    - cd ..
-    # Lay out what scripts/tcms-env.sh expects: tools/bin and tools/tcms-cli.
-    - mkdir -p tools/bin tools/tcms-cli/data
-    - cp tcms-cli-src/target/release/{tcms,verifier,test-executor,validate-yaml} tools/bin/
-    - cp -R tcms-cli-src/schemas tools/tcms-cli/
-    - cp -R tcms-cli-src/data/testcase_results_container tools/tcms-cli/data/
-    - tools/bin/test-executor --version
-    - tools/bin/verifier --version
+    - scripts/fetch-tcms-cli.sh
   artifacts:
     paths:
-      - tools/
+      - tools/bin/
+      - tools/tcms-cli/
     expire_in: 1 week
 
 test:
@@ -99,7 +93,17 @@ publish:
     - git config user.email "sut-1-pipeline@noreply.gitlab.crypto.tii.ae"
     - git add vv-tcms
     - 'git commit -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"'
-    - git push "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"
+    # Retry the push in case another pipeline moved the branch in the meantime.
+    - |
+      for attempt in 1 2 3; do
+        if git push "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"; then
+          exit 0
+        fi
+        git pull --rebase "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "${CI_DEFAULT_BRANCH}"
+        sleep 5
+      done
+      echo "error: could not push the published run" >&2
+      exit 1
 
 # Fails the pipeline when any test case failed. It runs last so the run is still
 # published with the failing verdicts.
