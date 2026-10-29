@@ -97,7 +97,7 @@ publish:
     - git config user.name "sut-1 pipeline"
     - git config user.email "sut-1-pipeline@noreply.gitlab.crypto.tii.ae"
     - git add vv-tcms
-    - git commit -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"
+    - 'git commit -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"'
     - git push "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"
 
 # Fails the pipeline when any test case failed. It runs last so the run is still
