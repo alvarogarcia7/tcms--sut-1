@@ -57,6 +57,9 @@ test:
 validate:
   stage: validate
   image: python:3.12-slim
+  variables:
+    # Token for the tcms-schemas clone; the tcms-cli token is scoped to its own project.
+    TCMS_READ_TOKEN: "$TCMS_SCHEMAS_READ_TOKEN"
   needs:
     - job: test
       artifacts: true
