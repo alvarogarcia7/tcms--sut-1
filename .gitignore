@@ -1,0 +1,6 @@
+# Built tcms-cli tools and the schema links the scripts create (see scripts/tcms-env.sh)
+/tools/
+/schemas
+/data
+# Local run output (published runs are copied into vv-tcms/)
+/build/

@@ -1,0 +1,58 @@
+type: test_case
+schema: tcms/test-case.schema.v1.json
+requirement: SUT1_CALC
+item: 1
+tc: 1
+id: SUT1_CALC_001
+description: Integer calculator add, sub and div behave as specified
+general_initial_conditions:
+  system:
+  - bash is installed
+initial_conditions:
+  sut:
+  - src/sut1/calc.sh is executable
+test_sequences:
+- id: 1
+  name: Addition and subtraction
+  description: Basic arithmetic
+  initial_conditions:
+    sut:
+    - calc.sh is available
+  steps:
+  - step: 1
+    description: 2 + 3 gives 5
+    command: bash src/sut1/calc.sh add 2 3
+    expected:
+      success: true
+      result: 0
+      output: '5'
+    verification:
+      result: '[[ $EXIT_CODE -eq 0 ]]'
+      output: grep -qx '5' <<< "$COMMAND_OUTPUT"
+  - step: 2
+    description: 7 - 10 gives -3
+    command: bash src/sut1/calc.sh sub 7 10
+    expected:
+      success: true
+      result: 0
+      output: '-3'
+    verification:
+      result: '[[ $EXIT_CODE -eq 0 ]]'
+      output: grep -qx -- '-3' <<< "$COMMAND_OUTPUT"
+- id: 2
+  name: Division by zero is rejected
+  description: Error handling
+  initial_conditions:
+    sut:
+    - calc.sh is available
+  steps:
+  - step: 1
+    description: 6 / 0 exits with code 2
+    command: bash src/sut1/calc.sh div 6 0
+    expected:
+      success: false
+      result: 2
+      output: ''
+    verification:
+      result: '[[ $EXIT_CODE -eq 2 ]]'
+      output: 'true'

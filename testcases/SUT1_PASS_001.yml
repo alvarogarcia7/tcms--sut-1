@@ -1,0 +1,60 @@
+type: test_case
+schema: tcms/test-case.schema.v1.json
+requirement: SUT1_PASS
+item: 1
+tc: 1
+id: SUT1_PASS_001
+description: Password check accepts strong passwords and rejects weak ones
+general_initial_conditions:
+  system:
+  - bash is installed
+initial_conditions:
+  sut:
+  - src/sut1/passcheck.sh is executable
+test_sequences:
+- id: 1
+  name: Strong password is accepted
+  description: A password with length 8+, a digit and an uppercase letter
+  initial_conditions:
+    sut:
+    - passcheck.sh is available
+  steps:
+  - step: 1
+    description: Secret123 is reported strong
+    command: bash src/sut1/passcheck.sh Secret123
+    expected:
+      success: true
+      result: 0
+      output: strong
+    verification:
+      result: '[[ $EXIT_CODE -eq 0 ]]'
+      output: grep -qx 'strong' <<< "$COMMAND_OUTPUT"
+- id: 2
+  name: Weak password is rejected
+  description: Too short, missing digit, missing uppercase
+  initial_conditions:
+    sut:
+    - passcheck.sh is available
+  steps:
+  - step: 1
+    description: abc is reported too short
+    command: bash src/sut1/passcheck.sh abc
+    expected:
+      success: false
+      result: 1
+      output: 'weak: too short'
+    verification:
+      result: '[[ $EXIT_CODE -eq 1 ]]'
+      output: |-
+        grep -qx 'weak: too short' <<< "$COMMAND_OUTPUT"
+  - step: 2
+    description: secret123 (no uppercase) is reported weak
+    command: bash src/sut1/passcheck.sh secret123
+    expected:
+      success: false
+      result: 1
+      output: 'weak: no uppercase letter'
+    verification:
+      result: '[[ $EXIT_CODE -eq 1 ]]'
+      output: |-
+        grep -qx 'weak: no uppercase letter' <<< "$COMMAND_OUTPUT"

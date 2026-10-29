@@ -1,0 +1,118 @@
+# SUT 1 pipeline: builds tcms-cli at a pinned tag, runs the SUT 1 test cases with it,
+# validates the records against tcms-schemas and appends the run to vv-tcms/ on the
+# default branch.
+
+stages:
+  - build-tcms
+  - test
+  - validate
+  - publish
+  - gate
+
+variables:
+  # tcms-cli release whose binaries are built from source (the v0.0.2-rc1 release only
+  # ships a macOS binary, so the Linux tools are built here from the same tag).
+  TCMS_CLI_REF: v0.0.2-rc1
+  TCMS_CLI_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli.git
+  # tcms-schemas revision used to validate the records.
+  TCMS_SCHEMAS_REF: main
+  TCMS_SCHEMAS_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-schemas.git
+  TCMS_RUN_ID: "RUN-${CI_PIPELINE_ID}"
+  TCMS_BUILD_ID: "${CI_COMMIT_SHORT_SHA}"
+  TCMS_TESTER: "${GITLAB_USER_LOGIN}"
+  GIT_DEPTH: "20"
+
+build-tcms:
+  stage: build-tcms
+  image: rust:1.95
+  variables:
+    CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+  cache:
+    key: tcms-cli-$TCMS_CLI_REF
+    paths:
+      - .cargo/
+      - tcms-cli-src/target/
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends pkg-config libssl-dev > /dev/null
+  script:
+    - scripts/clone-repo.sh "$TCMS_CLI_URL" "$TCMS_CLI_REF" tcms-cli-src
+    - cd tcms-cli-src
+    - cargo build --release -p tcms -p verifier -p test-executor -p validate-yaml
+    - cd ..
+    # Lay out what scripts/tcms-env.sh expects: tools/bin and tools/tcms-cli.
+    - mkdir -p tools/bin tools/tcms-cli/data
+    - cp tcms-cli-src/target/release/{tcms,verifier,test-executor,validate-yaml} tools/bin/
+    - cp -R tcms-cli-src/schemas tools/tcms-cli/
+    - cp -R tcms-cli-src/data/testcase_results_container tools/tcms-cli/data/
+    - tools/bin/test-executor --version
+    - tools/bin/verifier --version
+  artifacts:
+    paths:
+      - tools/
+    expire_in: 1 week
+
+test:
+  stage: test
+  image: debian:bookworm-slim
+  needs: [build-tcms]
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq bash ca-certificates > /dev/null
+  script:
+    - scripts/validate-yaml-testcases.sh
+    - scripts/run-tests.sh
+  artifacts:
+    when: always
+    paths:
+      - build/
+    expire_in: 1 week
+
+validate:
+  stage: validate
+  image: python:3.12-slim
+  needs:
+    - job: test
+      artifacts: true
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
+    - pip install -q --no-cache-dir pyyaml jsonschema
+  script:
+    - scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
+    - scripts/validate-results.sh "build/runs/$TCMS_RUN_ID" tcms-schemas-src
+
+# Appends the run to vv-tcms/ and pushes to the default branch. Runs only there, so merge
+# request pipelines never write results. The push uses a project access token.
+publish:
+  stage: publish
+  image: python:3.12-slim
+  needs:
+    - job: test
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
+    - pip install -q --no-cache-dir pyyaml
+  script:
+    - scripts/publish-results.sh "$TCMS_RUN_ID"
+    - git config user.name "sut-1 pipeline"
+    - git config user.email "sut-1-pipeline@noreply.gitlab.crypto.tii.ae"
+    - git add vv-tcms
+    - git commit -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"
+    - git push "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"
+
+# Fails the pipeline when any test case failed. It runs last so the run is still
+# published with the failing verdicts.
+gate:
+  stage: gate
+  image: debian:bookworm-slim
+  needs:
+    - job: test
+      artifacts: true
+  script:
+    - |
+      if grep -q 'verdict: fail' "build/runs/$TCMS_RUN_ID/test-run.yaml"; then
+        echo "Run $TCMS_RUN_ID has failing test cases:"
+        grep -B1 'verdict: fail' "build/runs/$TCMS_RUN_ID/test-run.yaml" || true
+        exit 1
+      fi
+      echo "Run $TCMS_RUN_ID: all test cases passed"
