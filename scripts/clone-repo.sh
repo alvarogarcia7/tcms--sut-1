@@ -14,4 +14,6 @@ auth="gitlab-ci-token:${CI_JOB_TOKEN:-}"
 if [ -n "${TCMS_READ_TOKEN:-}" ]; then
   auth="oauth2:${TCMS_READ_TOKEN}"
 fi
+# Runners can reuse a workspace, so a previous clone may still be there.
+rm -rf "$dest"
 git clone --depth 1 --branch "$ref" "https://${auth}@${url#https://}" "$dest"
