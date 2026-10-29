@@ -57,9 +57,6 @@ test:
 validate:
   stage: validate
   image: python:3.12-slim
-  variables:
-    # Token for the tcms-schemas clone; the tcms-cli token is scoped to its own project.
-    TCMS_READ_TOKEN: "$TCMS_SCHEMAS_READ_TOKEN"
   needs:
     - job: test
       artifacts: true
@@ -67,7 +64,8 @@ validate:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
     - pip install -q --no-cache-dir pyyaml jsonschema
   script:
-    - scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
+    # The tcms-schemas token is scoped to that project only, so it is passed to this clone alone.
+    - TCMS_READ_TOKEN="$TCMS_SCHEMAS_READ_TOKEN" scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
     - scripts/validate-results.sh "build/runs/$TCMS_RUN_ID" tcms-schemas-src
     - scripts/validate-testcases-schema.sh tcms-schemas-src
 
@@ -85,18 +83,22 @@ publish:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
     - pip install -q --no-cache-dir pyyaml
   script:
-    - scripts/publish-results.sh "$TCMS_RUN_ID"
     - git config user.name "sut-1 pipeline"
     - git config user.email "sut-1-pipeline@noreply.gitlab.crypto.tii.ae"
-    - git add vv-tcms
-    - 'git commit -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"'
-    # Retry the push in case another pipeline moved the branch in the meantime.
+    # Publishing is redone on freshly fetched main for each attempt: another run may have
+    # appended to index.jsonl since this job started, so rebasing would conflict.
     - |
+      remote="https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
       for attempt in 1 2 3; do
-        if git push "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"; then
+        git fetch -q "$remote" "${CI_DEFAULT_BRANCH}"
+        git reset -q --hard FETCH_HEAD
+        scripts/publish-results.sh "$TCMS_RUN_ID"
+        git add vv-tcms
+        git commit -q -m "vv-tcms: publish $TCMS_RUN_ID [skip ci]"
+        if git push -q "$remote" "HEAD:${CI_DEFAULT_BRANCH}"; then
           exit 0
         fi
-        git pull --rebase "https://oauth2:${SUT1_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "${CI_DEFAULT_BRANCH}"
+        echo "push rejected (attempt $attempt), retrying on fresh ${CI_DEFAULT_BRANCH}"
         sleep 5
       done
       echo "error: could not push the published run" >&2
