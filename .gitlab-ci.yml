@@ -73,6 +73,7 @@ validate:
   script:
     - scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
     - scripts/validate-results.sh "build/runs/$TCMS_RUN_ID" tcms-schemas-src
+    - scripts/validate-testcases-schema.sh tcms-schemas-src
 
 # Appends the run to vv-tcms/ and pushes to the default branch. Runs only there, so merge
 # request pipelines never write results. The push uses a project access token.
