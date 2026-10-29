@@ -1,0 +1,115 @@
+type: test_results_container
+schema: tcms/test-results-container.schema.v1.json
+title: SUT 1 verification results
+project: SUT 1
+test_date: "2026-10-29T12:40:01.815001241Z"
+test_results:
+- test_case_id: SUT1_PASS_001
+  description: Password check accepts strong passwords and rejects weak ones
+  sequences:
+  - sequence_id: 1
+    name: Strong password is accepted
+    step_results:
+    - Pass:
+        step: 1
+        description: Secret123 is reported strong
+        requirement: SUT1_PASS
+        item: 1
+        tc: 1
+    all_steps_passed: true
+    requirement: SUT1_PASS
+    item: 1
+    tc: 1
+  - sequence_id: 2
+    name: Weak password is rejected
+    step_results:
+    - Pass:
+        step: 1
+        description: abc is reported too short
+        requirement: SUT1_PASS
+        item: 1
+        tc: 1
+    - Pass:
+        step: 2
+        description: secret123 (no uppercase) is reported weak
+        requirement: SUT1_PASS
+        item: 1
+        tc: 1
+    all_steps_passed: true
+    requirement: SUT1_PASS
+    item: 1
+    tc: 1
+  total_steps: 3
+  passed_steps: 3
+  failed_steps: 0
+  not_executed_steps: 0
+  overall_pass: true
+  requirement: SUT1_PASS
+  item: 1
+  tc: 1
+  source_yaml_sha256: aa06e8d20872abbf2e431b71e5333dcf836c694eb47d72b4635570b54cec370c
+  run_id: RUN-32456
+  build_id: af0b8fa5
+  environment: SUT 1 (bash) on Linux x86_64
+  tester: alvarogarcia8110
+  date: "2026-10-29T12:40:01Z"
+- test_case_id: SUT1_CALC_001
+  description: Integer calculator add, sub and div behave as specified
+  sequences:
+  - sequence_id: 1
+    name: Addition and subtraction
+    step_results:
+    - Pass:
+        step: 1
+        description: 2 + 3 gives 5
+        requirement: SUT1_CALC
+        item: 1
+        tc: 1
+    - Pass:
+        step: 2
+        description: 7 - 10 gives -3
+        requirement: SUT1_CALC
+        item: 1
+        tc: 1
+    all_steps_passed: true
+    requirement: SUT1_CALC
+    item: 1
+    tc: 1
+  - sequence_id: 2
+    name: Division by zero is rejected
+    step_results:
+    - Pass:
+        step: 1
+        description: 6 / 0 exits with code 2
+        requirement: SUT1_CALC
+        item: 1
+        tc: 1
+    all_steps_passed: true
+    requirement: SUT1_CALC
+    item: 1
+    tc: 1
+  total_steps: 3
+  passed_steps: 3
+  failed_steps: 0
+  not_executed_steps: 0
+  overall_pass: true
+  requirement: SUT1_CALC
+  item: 1
+  tc: 1
+  source_yaml_sha256: 2cbb21ea071a5cc68fd18475c1a29a434696e2a1e0e68eb7eb36e3c4e4563a87
+  run_id: RUN-32456
+  build_id: af0b8fa5
+  environment: SUT 1 (bash) on Linux x86_64
+  tester: alvarogarcia8110
+  date: "2026-10-29T12:40:01Z"
+metadata:
+  environment: SUT 1 (bash) on Linux x86_64
+  platform: Linux x86_64
+  executor: tcms-cli tcms-cli
+  execution_duration: 0.0
+  total_test_cases: 2
+  passed_test_cases: 2
+  failed_test_cases: 0
+  source_hashes:
+    SUT1_PASS_001: aa06e8d20872abbf2e431b71e5333dcf836c694eb47d72b4635570b54cec370c
+    SUT1_CALC_001: 2cbb21ea071a5cc68fd18475c1a29a434696e2a1e0e68eb7eb36e3c4e4563a87
