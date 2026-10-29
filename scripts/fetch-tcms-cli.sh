@@ -70,7 +70,9 @@ fetch_prebuilt() {
   else
     python3 -m zipfile -e "$zip" tools/download/extract
   fi
-  for bin in tcms verifier test-executor validate-yaml; do
+  # The pipeline needs these three. Older releases name or omit the others (v0.0.1-rc2 has
+  # no tcms binary), so only these are required.
+  for bin in test-executor verifier validate-yaml; do
     [ -f "tools/download/extract/$bin" ] || { echo "prebuilt: $bin missing from $zip"; return 1; }
     cp "tools/download/extract/$bin" tools/bin/
     chmod +x "tools/bin/$bin"
@@ -97,8 +99,10 @@ build_from_source() {
     cd tools/src/tcms-cli
     cargo build --release -p tcms -p verifier -p test-executor -p validate-yaml
   )
+  # Ask cargo where the target dir is: CARGO_TARGET_DIR may point elsewhere.
+  target_dir="$(cd tools/src/tcms-cli && cargo metadata --format-version 1 --no-deps | jq -r '.target_directory')"
   for bin in tcms verifier test-executor validate-yaml; do
-    cp "tools/src/tcms-cli/target/release/$bin" tools/bin/
+    cp "$target_dir/release/$bin" tools/bin/
   done
   rm -rf tools/tcms-cli/schemas tools/tcms-cli/data
   mkdir -p tools/tcms-cli/data
