@@ -1,0 +1,32 @@
+[
+  {
+    "test_sequence": 1,
+    "step": 1,
+    "command": "bash src/sut1/calc.sh add 2 3",
+    "exit_code": 0,
+    "output": "5",
+    "timestamp": "2026-10-29T12:54:44.272110998+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  },
+  {
+    "test_sequence": 1,
+    "step": 2,
+    "command": "bash src/sut1/calc.sh sub 7 10",
+    "exit_code": 0,
+    "output": "-3",
+    "timestamp": "2026-10-29T12:54:44.277440288+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  },
+  {
+    "test_sequence": 2,
+    "step": 1,
+    "command": "bash src/sut1/calc.sh div 6 0",
+    "exit_code": 2,
+    "output": "",
+    "timestamp": "2026-10-29T12:54:44.280872663+00:00",
+    "result_verification_pass": true,
+    "output_verification_pass": true
+  }
+]
