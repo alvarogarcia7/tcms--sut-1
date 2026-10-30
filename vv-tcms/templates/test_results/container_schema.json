@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test Results Container",
+  "description": "Schema for overall test results document containing multiple test case results",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the test results document"
+    },
+    "project": {
+      "type": "string",
+      "description": "Project name or identifier"
+    },
+    "test_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date and time when tests were executed"
+    },
+    "test_results": {
+      "type": "array",
+      "description": "Array of test case verification results",
+      "items": {
+        "type": "object"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Execution environment and metadata details",
+      "properties": {
+        "environment": {
+          "type": "string",
+          "description": "Test environment name or identifier"
+        },
+        "platform": {
+          "type": "string",
+          "description": "Platform on which tests were executed"
+        },
+        "executor": {
+          "type": "string",
+          "description": "Name or identifier of the test executor"
+        },
+        "execution_duration": {
+          "type": "number",
+          "description": "Total execution time in seconds",
+          "minimum": 0
+        },
+        "total_test_cases": {
+          "type": "integer",
+          "description": "Total number of test cases executed",
+          "minimum": 0
+        },
+        "passed_test_cases": {
+          "type": "integer",
+          "description": "Number of test cases that passed",
+          "minimum": 0
+        },
+        "failed_test_cases": {
+          "type": "integer",
+          "description": "Number of test cases that failed",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "environment",
+        "platform",
+        "executor"
+      ]
+    }
+  },
+  "required": [
+    "title",
+    "project",
+    "test_date",
+    "test_results",
+    "metadata"
+  ]
+}

@@ -1,0 +1,107 @@
+== High Assurance Verification: {{ id | strip }}
+
+*Requirement*: {{ requirement | strip }}
+
+*Design Assurance Level (DAL)*: Level {{ dal_level }}
+
+*Sanitized ID*: {{ id | replace_regex(old="[^a-zA-Z0-9_]", new="_") }}
+
+=== Description
+
+{{ description | strip }}
+
+=== Verification Objectives
+
+This verification activity addresses the following objectives per DO-178C/DO-254 guidance for DAL {{ dal_level }}:
+
+[cols="1,3,1,2",options="header"]
+|===
+| Objective ID | Description | Independence | Methods
+
+{% for obj in verification_objectives -%}
+| {{ obj.objective_id | strip }}
+| {{ obj.description | strip }}
+| {{ obj.independence_level | strip }}
+| {{ obj.verification_methods | join(", ") }}
+
+{% endfor -%}
+|===
+
+=== Traceability
+
+==== High-Level Requirements
+{% for req in traceability.high_level_requirements %}
+* {{ req | strip }}
+{% endfor %}
+
+==== Low-Level Requirements
+{% for req in traceability.low_level_requirements %}
+* {{ req | strip }}
+{% endfor %}
+
+==== Design Components
+{% for comp in traceability.design_components %}
+* {{ comp | strip }}
+{% endfor %}
+
+==== Source Code
+{% for src in traceability.source_code %}
+* {{ src | strip }}
+{% endfor %}
+
+=== Structural Coverage Analysis
+
+*Statement Coverage*: {{ structural_coverage.statement_coverage }}%
+
+*Decision Coverage*: {{ structural_coverage.decision_coverage }}%
+
+{% if structural_coverage.mc_dc_coverage %}*MC/DC Coverage*: {{ structural_coverage.mc_dc_coverage }}%{% endif %}
+
+{% if structural_coverage.data_coupling %}*Data Coupling Analysis*: {{ structural_coverage.data_coupling | strip }}{% endif %}
+
+{% if structural_coverage.control_coupling %}*Control Coupling Analysis*: {{ structural_coverage.control_coupling | strip }}{% endif %}
+
+=== Verification Activities
+
+{% for activity in verification_activities %}
+==== {{ activity.activity_id }}: {{ activity.activity_name | strip }}
+
+*DO-178C Reference*: {{ activity.do178c_reference | strip }}
+
+*Description*: {{ activity.description | strip }}
+
+*Completion Criteria*:
+{% for criteria in activity.completion_criteria %}
+* {{ criteria | strip }}
+{% endfor %}
+
+*Evidence*:
+{% for evidence in activity.evidence %}
+* {{ evidence | strip }}
+{% endfor %}
+
+{% endfor %}
+
+=== Configuration Management
+
+*Baseline ID*: {{ configuration_management.baseline_id | strip }}
+
+{% if configuration_management.change_tracking %}
+*Change Tracking*:
+{% for change in configuration_management.change_tracking %}
+* {{ change | strip }}
+{% endfor %}
+{% endif %}
+
+{% if configuration_management.problem_reports %}
+*Problem Reports*:
+{% for pr in configuration_management.problem_reports %}
+* {{ pr | strip }}
+{% endfor %}
+{% endif %}
+
+=== Acceptance Criteria
+
+{% for criterion in acceptance_criteria %}
+* {{ criterion | strip }}
+{% endfor -%}

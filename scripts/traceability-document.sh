@@ -13,8 +13,10 @@
 #
 # The per-test containers of stage 4 (verifier --test-case --log), which stage 6 renders, are
 # kept in build/traceability/20_verification/ and are not part of the zip.
-# Rendering uses tpdg (tools/tpdg/tpdg, scripts/fetch-tpdg.sh) with the tcms-cli result
-# container schema and the templates in templates/traceability/. PDF is not produced.
+# Each document is rendered in two tpdg runs (README "Chaining commands"): first the test
+# cases (test_cases_md) and the requirement traceability matrix (traceability_matrix_md), then
+# the outer document with both in its data. The templates are the TPDG ones in
+# vv-tcms/templates/ (verification_methods/, test_results/). PDF is not produced.
 #
 # Environment:
 #   TCMS_DOC_REQUEST_ID  required: the tcms-web request id, written to the manifest
@@ -39,7 +41,9 @@ cd "$REPO_ROOT"
 
 REQUEST_ID="${TCMS_DOC_REQUEST_ID:?TCMS_DOC_REQUEST_ID is not set (the job runs only for tcms-web requests)}"
 TPDG_BIN="${TEST_PLAN_DOC_GEN:-$REPO_ROOT/tools/tpdg/tpdg}"
-TEMPLATE_DIR="$REPO_ROOT/templates/traceability"
+TEMPLATE_DIR="$REPO_ROOT/vv-tcms/templates/test_results"
+VERIFICATION_METHODS_DIR="$REPO_ROOT/vv-tcms/templates/verification_methods"
+CONTAINER_SCHEMA="$TEMPLATE_DIR/container_schema.json"
 HOST="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname)"
 
 WORK_DIR="$REPO_ROOT/build/traceability"
@@ -50,6 +54,9 @@ OUTPUT_LOG="$WORK_DIR/tool-output.txt"
 ZIP="$REPO_ROOT/traceability-document.zip"
 
 [ -x "$TPDG_BIN" ] || { echo "error: tpdg not found at $TPDG_BIN (run scripts/fetch-tpdg.sh)" >&2; exit 1; }
+for tool in yq jq zip unzip; do
+  command -v "$tool" > /dev/null || { echo "error: $tool not found (see the traceability-document job in .gitlab-ci.yml)" >&2; exit 1; }
+done
 
 rm -rf "$WORK_DIR" "$ZIP"
 mkdir -p "$SOURCE_DIR" "$VERIFICATION_RESULTS_DIR" "$REPORTS_DIR"
@@ -98,14 +105,45 @@ run_tool() { # run_tool <label> <command...>: prints the tool output only when i
     echo "  FAIL  $1"
     sed 's/^/        /' "$OUTPUT_LOG"
     failures=$((failures + 1))
+    return 1
   fi
 }
 
-render() { # render <container> <adoc output> <md output>
-  run_tool "${2#"$REPORTS_DIR"/}" "$TPDG_BIN" --single "$RESULT_SCHEMA" \
-    "$TEMPLATE_DIR/container.adoc" "$1" --format adoc --output "$2"
-  run_tool "${3#"$REPORTS_DIR"/}" "$TPDG_BIN" --single "$RESULT_SCHEMA" \
-    "$TEMPLATE_DIR/container.md.j2" "$1" --format md --output "$3"
+# render_document <container yaml> <md|adoc> <output>
+# Run 1: test_cases_md, one result per test case, and traceability_matrix_md, the
+#        requirement-to-test matrix. Run 2: the outer document with both in its data.
+render_document() {
+  local container="$1" format="$2" output="$3" test_case_id
+  local label="${output#"$REPORTS_DIR"/}"
+  local work="$WORK_DIR/render/$label"
+  local suffix="$format.j2"
+  mkdir -p "$work/results"
+
+  if ! yq -c . "$container" > "$work/container.json"; then
+    echo "  FAIL  $label: container is not readable"
+    failures=$((failures + 1))
+    return
+  fi
+  # Per-test result input of tpdg: the test result of the container with type: result.
+  while IFS= read -r result; do
+    test_case_id="$(jq -r '.test_case_id' <<< "$result")"
+    jq -c '{type: "result"} + .' <<< "$result" > "$work/results/$test_case_id.yml"
+  done < <(jq -c '.test_results[]' "$work/container.json")
+
+  if run_tool "$label: test_cases" "$TPDG_BIN" --multiple-by-type type "$VERIFICATION_METHODS_DIR" \
+       "$work"/results/*.yml --format "$format" --output "$work/test_cases.$format" \
+     && jq -c '. + {requirements: ([.test_results[] | .requirement // empty] | unique)}' \
+       "$work/container.json" > "$work/matrix_input.json" \
+     && run_tool "$label: traceability_matrix" "$TPDG_BIN" --single "$CONTAINER_SCHEMA" \
+       "$TEMPLATE_DIR/traceability_matrix.$suffix" "$work/matrix_input.json" \
+       --format "$format" --output "$work/traceability_matrix.$format"; then
+    jq -c --rawfile test_cases "$work/test_cases.$format" --rawfile matrix "$work/traceability_matrix.$format" \
+      '. + {test_cases_md: $test_cases, traceability_matrix_md: $matrix}' \
+      "$work/container.json" > "$work/document.json"
+    run_tool "$label" "$TPDG_BIN" --single "$CONTAINER_SCHEMA" \
+      "$TEMPLATE_DIR/test_container_result.$suffix" "$work/document.json" \
+      --format "$format" --output "$output" || true
+  fi
 }
 
 # --- Stage 6: per test case container (stage 4 verifier call) and AsciiDoc + Markdown -------
@@ -133,9 +171,14 @@ for log_file in "$EXECUTION_LOGS_DIR"/*.json; do
     --output "$container_file" \
     --schema "$RESULT_SCHEMA" \
     --run-id "$run_id" --build-id "$build_id" --no-test-run \
-    --success-on-completion
-  [ -f "$container_file" ] || continue
-  render "$container_file" "$REPORTS_DIR/asciidoc/$test_case_id.adoc" "$REPORTS_DIR/markdown/$test_case_id.md"
+    --success-on-completion || true
+  if [ ! -f "$container_file" ]; then
+    echo "  FAIL  ${test_case_id}_container.yaml was not written"
+    failures=$((failures + 1))
+    continue
+  fi
+  render_document "$container_file" adoc "$REPORTS_DIR/asciidoc/$test_case_id.adoc"
+  render_document "$container_file" md "$REPORTS_DIR/markdown/$test_case_id.md"
 done
 
 # --- Stage 7: consolidated documentation (verifier --folder mode) ----------------------------
@@ -151,9 +194,10 @@ run_tool "consolidated/all_tests_container.yaml" "$VERIFIER" \
   --output "$consolidated_container" \
   --schema "$RESULT_SCHEMA" \
   --run-id "$run_id" --build-id "$build_id" --no-test-run \
-  --success-on-completion
+  --success-on-completion || true
 if [ -f "$consolidated_container" ]; then
-  render "$consolidated_container" "$REPORTS_DIR/consolidated/all_tests.adoc" "$REPORTS_DIR/consolidated/all_tests.md"
+  render_document "$consolidated_container" adoc "$REPORTS_DIR/consolidated/all_tests.adoc"
+  render_document "$consolidated_container" md "$REPORTS_DIR/consolidated/all_tests.md"
 fi
 
 # Empty documents count as failures: tcms-web hands the zip to the user as is.
@@ -179,6 +223,7 @@ done < <(find "$REPORTS_DIR" -type f -empty -print0)
   echo
   echo "Stage 6 (Documentation): asciidoc/ and markdown/, one report per test case."
   echo "Stage 7 (Consolidated Docs): consolidated/, all test cases of the run in one document."
+  echo "Each document has the test cases and a requirement traceability matrix."
   echo "PDF is not produced."
   if [ ${#warnings[@]} -gt 0 ]; then
     echo

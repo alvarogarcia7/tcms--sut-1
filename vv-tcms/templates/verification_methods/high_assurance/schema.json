@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["high_assurance"]
+    },
+    "requirement": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "dal_level": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D", "E"]
+    },
+    "verification_objectives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "objective_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "independence_level": {
+            "type": "string",
+            "enum": ["independent", "organizational", "system"]
+          },
+          "verification_methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "objective_id",
+          "description",
+          "independence_level",
+          "verification_methods"
+        ]
+      }
+    },
+    "traceability": {
+      "type": "object",
+      "properties": {
+        "high_level_requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "low_level_requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "design_components": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_code": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "high_level_requirements",
+        "low_level_requirements",
+        "design_components",
+        "source_code"
+      ]
+    },
+    "structural_coverage": {
+      "type": "object",
+      "properties": {
+        "statement_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "decision_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "mc_dc_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "data_coupling": {
+          "type": "string"
+        },
+        "control_coupling": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement_coverage",
+        "decision_coverage"
+      ]
+    },
+    "verification_activities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "activity_name": {
+            "type": "string"
+          },
+          "do178c_reference": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "completion_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "activity_id",
+          "activity_name",
+          "do178c_reference",
+          "description",
+          "completion_criteria",
+          "evidence"
+        ]
+      }
+    },
+    "configuration_management": {
+      "type": "object",
+      "properties": {
+        "baseline_id": {
+          "type": "string"
+        },
+        "change_tracking": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "problem_reports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "baseline_id"
+      ]
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "type",
+    "requirement",
+    "id",
+    "description",
+    "dal_level",
+    "verification_objectives",
+    "traceability",
+    "structural_coverage",
+    "verification_activities",
+    "configuration_management",
+    "acceptance_criteria"
+  ]
+}

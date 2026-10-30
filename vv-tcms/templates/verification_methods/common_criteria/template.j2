@@ -1,0 +1,111 @@
+## Common Criteria Evaluation: {{ id | strip }}
+
+**Requirement**: {{ requirement | strip }}
+
+**Evaluation Assurance Level (EAL)**: {{ evaluation_assurance_level }}
+
+**Protection Profile**: {{ protection_profile | strip }}
+
+**Sanitized ID**: {{ id | replace_regex(old="[^a-zA-Z0-9_]", new="_") }}
+
+## Description
+
+{{ description | strip }}
+
+## Security Functional Requirements (SFR)
+
+{% for sfr in security_functional_requirements %}
+### {{ sfr.sfr_id }}: {{ sfr.component | strip }}
+
+**Family**: {{ sfr.family | strip }}
+
+**Description**: {{ sfr.description | strip }}
+
+**Evaluation Activities**:
+{% for activity in sfr.evaluation_activities %}
+- {{ activity | strip }}
+{% endfor %}
+
+{% endfor %}
+
+## Security Assurance Requirements (SAR)
+
+{% for sar in security_assurance_requirements %}
+### {{ sar.sar_id }}: {{ sar.component | strip }}
+
+**Class**: {{ sar.class | strip }}
+
+**Family**: {{ sar.family | strip }}
+
+**Description**: {{ sar.description | strip }}
+
+**Developer Actions**:
+{% for action in sar.developer_actions %}
+- {{ action | strip }}
+{% endfor %}
+
+**Evaluator Actions**:
+{% for action in sar.evaluator_actions %}
+- {{ action | strip }}
+{% endfor %}
+
+{% endfor %}
+
+## TOE Security Functions (TSF)
+
+| **TSF ID** | **Name** | **Description** | **SFR Mapping** |
+| ---------- | -------- | --------------- | --------------- |
+{% for tsf in toe_security_functions -%}
+| {{ tsf.tsf_id | strip }} | {{ tsf.name | strip }} | {{ tsf.description | strip }} | {{ tsf.sfr_mapping | join(", ") }} |
+{% endfor %}
+
+## Test Coverage Analysis
+
+**Functional Coverage**: {{ test_coverage_analysis.functional_coverage }}%
+
+**Interface Coverage**: {{ test_coverage_analysis.interface_coverage }}%
+
+**SFR Coverage**: {{ test_coverage_analysis.sfr_coverage }}%
+
+**Security Mechanisms Tested**:
+{% for mechanism in test_coverage_analysis.security_mechanisms_tested %}
+- {{ mechanism | strip }}
+{% endfor %}
+
+## Vulnerability Assessment
+
+### Penetration Testing
+
+| **Test ID** | **Attack Vector** | **Result** | **Mitigation** |
+| ----------- | ----------------- | ---------- | -------------- |
+{% for test in vulnerability_assessment.penetration_testing -%}
+| {{ test.test_id | strip }} | {{ test.attack_vector | strip }} | {{ test.result | strip }} | {% if test.mitigation %}{{ test.mitigation | strip }}{% else %}N/A{% endif %} |
+{% endfor %}
+
+{% if vulnerability_assessment.covert_channel_analysis %}
+### Covert Channel Analysis
+{% for analysis in vulnerability_assessment.covert_channel_analysis %}
+- {{ analysis | strip }}
+{% endfor %}
+{% endif %}
+
+{% if vulnerability_assessment.side_channel_analysis %}
+### Side Channel Analysis
+{% for analysis in vulnerability_assessment.side_channel_analysis %}
+- {{ analysis | strip }}
+{% endfor %}
+{% endif %}
+
+## Evidence Documents
+
+| **Document ID** | **Title** | **Version** | **Relevance** |
+| --------------- | --------- | ----------- | ------------- |
+{% for doc in evidence_documents -%}
+| {{ doc.doc_id | strip }} | {{ doc.title | strip }} | {{ doc.version | strip }} | {{ doc.relevance | strip }} |
+{% endfor %}
+
+## Acceptance Criteria
+
+{% for criterion in acceptance_criteria %}
+- {{ criterion | strip }}
+{% endfor -%}

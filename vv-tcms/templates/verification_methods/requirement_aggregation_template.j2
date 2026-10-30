@@ -1,0 +1,45 @@
+requirements_with_detail:
+{%- set reqs = ["XXX100", "XXX200", "XXX300", "XXX400"] %}
+{%- for req in reqs %}
+{%- set filtered = test_results | filter(attribute="requirement", value=req) %}
+{%- if filtered | length > 0 %}
+  - requirement: {{ req }}
+    items:
+{%- for item in filtered %}
+      - item: {% if item.item %}{{ item.item }}{% else %}null{% endif %}
+        tc: {% if item.tc %}{{ item.tc }}{% else %}null{% endif %}
+        id: {{ item.test_case_id }}
+        pass: {% if item.overall_pass %}true{% else %}false{% endif %}
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+status_per_requirement:
+{%- for req in reqs %}
+{%- set filtered = test_results | filter(attribute="requirement", value=req) %}
+{%- if filtered | length > 0 %}
+{%- set all_pass = filtered | filter(attribute="overall_pass", value=true) | length == filtered | length %}
+  - requirement: {{ req }}
+    pass: {% if all_pass %}true{% else %}false{% endif %}
+{%- endif %}
+{%- endfor %}
+requirements_by_status:
+  pass:
+{%- for req in reqs %}
+{%- set filtered = test_results | filter(attribute="requirement", value=req) %}
+{%- if filtered | length > 0 %}
+{%- set all_pass = filtered | filter(attribute="overall_pass", value=true) | length == filtered | length %}
+{%- if all_pass %}
+    - {{ req }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+  fail:
+{%- for req in reqs %}
+{%- set filtered = test_results | filter(attribute="requirement", value=req) %}
+{%- if filtered | length > 0 %}
+{%- set all_pass = filtered | filter(attribute="overall_pass", value=true) | length == filtered | length %}
+{%- if not all_pass %}
+    - {{ req }}
+{%- endif %}
+{%- endif %}
+{%- endfor %}

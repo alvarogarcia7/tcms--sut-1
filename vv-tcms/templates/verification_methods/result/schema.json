@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["result"]
+    },
+    "test_case_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "sequences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sequence_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "step_results": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "all_steps_passed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sequence_id",
+          "name",
+          "step_results",
+          "all_steps_passed"
+        ]
+      }
+    },
+    "total_steps": {
+      "type": "integer"
+    },
+    "passed_steps": {
+      "type": "integer"
+    },
+    "failed_steps": {
+      "type": "integer"
+    },
+    "not_executed_steps": {
+      "type": "integer"
+    },
+    "overall_pass": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "type",
+    "test_case_id",
+    "description",
+    "sequences",
+    "total_steps",
+    "passed_steps",
+    "failed_steps",
+    "not_executed_steps",
+    "overall_pass"
+  ]
+}

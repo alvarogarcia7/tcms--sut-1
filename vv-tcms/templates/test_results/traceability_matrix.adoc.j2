@@ -1,0 +1,14 @@
+[cols="1{% for req in requirements %},2{% endfor %}", options="header"]
+|===
+| Requirement
+{% for req in requirements %}| {{ req }}
+{% endfor %}
+| Tests
+{% for req in requirements %}a|
+{% for tr in test_results | filter(attribute="requirement", value=req) %}{% if tr.overall_pass %}✓{% else %}[red]#✗#{% endif %} {{ tr.test_case_id }} +
+{% endfor %}
+{% endfor %}
+| Verdict
+{% for req in requirements %}{% set failed = test_results | filter(attribute="requirement", value=req) | filter(attribute="overall_pass", value=false) %}| {% if failed | length == 0 %}PASS{% else %}FAIL{% endif %}
+{% endfor %}
+|===

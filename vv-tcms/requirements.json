@@ -1,0 +1,7 @@
+{
+  "product_id": "sut-1",
+  "requirements": [
+    { "id": "SUT1_CALC" },
+    { "id": "SUT1_PASS" }
+  ]
+}

@@ -5,3 +5,4 @@ the pipeline (`scripts/publish-results.sh`).
 
 - `runs/<RUN_ID>/` one folder per run. Never edited after it is published.
 - `index.jsonl` one line per run, appended.
+- `templates/` document templates (see `templates/README.md`). Not run output; edited by hand.

@@ -1,0 +1,42 @@
+## Analysis: {{ id | strip }}
+
+**Requirement**: {{ requirement | strip }}
+
+**Sanitized ID**: {{ id | replace_regex(old="\\s+", new="_") }}
+
+## Description
+
+{{ description | strip }}
+
+## Method
+
+{{ method | strip }}
+
+## Calculations
+
+{% for calc in calculations %}
+### {{ calc.name | strip }}
+
+**Formula**: {{ calc.formula | strip }}
+
+{% if calc.parameters %}
+**Parameters**:
+{% for param, desc in calc.parameters %}
+- **{{ param | strip }}**: {{ desc | strip }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+## Models
+
+| **Model Name** | **Type** | **Description** |
+| -------------- | -------- | --------------- |
+{% for model in models -%}
+| {{ model.name | strip }} | {{ model.type | strip }} | {{ model.description | replace_regex(old="\\s+", new=" ") | strip }} |
+{% endfor %}
+
+## Acceptance Criteria
+
+{% for criterion in acceptance_criteria %}
+- {{ criterion | strip }}
+{% endfor -%}

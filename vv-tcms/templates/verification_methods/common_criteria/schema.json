@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["common_criteria"]
+    },
+    "requirement": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "evaluation_assurance_level": {
+      "type": "string",
+      "enum": ["EAL1", "EAL2", "EAL3", "EAL4", "EAL5", "EAL6", "EAL7"]
+    },
+    "protection_profile": {
+      "type": "string"
+    },
+    "security_functional_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sfr_id": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "component": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "evaluation_activities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "sfr_id",
+          "family",
+          "component",
+          "description",
+          "evaluation_activities"
+        ]
+      }
+    },
+    "security_assurance_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sar_id": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "component": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "developer_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evaluator_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "sar_id",
+          "class",
+          "family",
+          "component",
+          "description",
+          "developer_actions",
+          "evaluator_actions"
+        ]
+      }
+    },
+    "toe_security_functions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tsf_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "sfr_mapping": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "tsf_id",
+          "name",
+          "description",
+          "sfr_mapping"
+        ]
+      }
+    },
+    "test_coverage_analysis": {
+      "type": "object",
+      "properties": {
+        "functional_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "interface_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "sfr_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "security_mechanisms_tested": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "functional_coverage",
+        "interface_coverage",
+        "sfr_coverage",
+        "security_mechanisms_tested"
+      ]
+    },
+    "vulnerability_assessment": {
+      "type": "object",
+      "properties": {
+        "penetration_testing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "test_id": {
+                "type": "string"
+              },
+              "attack_vector": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              },
+              "mitigation": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "test_id",
+              "attack_vector",
+              "result"
+            ]
+          }
+        },
+        "covert_channel_analysis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "side_channel_analysis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "penetration_testing"
+      ]
+    },
+    "evidence_documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "doc_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "relevance": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "title",
+          "version",
+          "relevance"
+        ]
+      }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "type",
+    "requirement",
+    "id",
+    "description",
+    "evaluation_assurance_level",
+    "protection_profile",
+    "security_functional_requirements",
+    "security_assurance_requirements",
+    "toe_security_functions",
+    "test_coverage_analysis",
+    "vulnerability_assessment",
+    "evidence_documents",
+    "acceptance_criteria"
+  ]
+}

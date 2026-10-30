@@ -1,0 +1,69 @@
+== Test Case: {{ id | strip }}
+
+*Requirement*: {{ requirement | strip }}
+
+*Item*: {{ item }}
+
+*Sanitized Test ID*: {{ id | replace_regex(old="[^a-zA-Z0-9_]", new="_") }}
+
+=== Description
+
+{{ description | strip }}
+
+
+=== General Initial Conditions
+
+[cols="1,1", options="header"]
+|===
+| Entity
+| Description of the general initial condition
+
+{% for k,v in general_initial_conditions -%}
+{% for item in v -%}
+| {{ k }}
+| {{ item }}
+
+{% endfor -%}
+{%- endfor %}
+|===
+
+{% for ts in test_sequences %}
+=== Test Sequence {{ ts.id }} {{ ts.name | strip }}
+
+{{ ts.description | strip }}
+
+{% if ts.initial_conditions %}
+==== Initial Conditions for This Sequence
+
+[cols="1,1", options="header"]
+|===
+| Entity
+| Description
+
+{% for k,v in ts.initial_conditions -%}
+{% for item in v -%}
+| {{ k }}
+| {{ item }}
+
+{% endfor -%}
+{%- endfor %}
+|===
+{% endif %}
+
+[cols="1,1,1,1", options="header"]
+|===
+| Step Number
+| Action
+| Expected Result
+| Expected Output
+
+{% for step in ts.steps -%}
+| {{ step.step }}
+| {{ step.description | replace(old="MTD_", new="") | strip }}
+| {{ step.expected.result | strip }}
+| {{ step.expected.output | strip }}
+
+{% endfor %}
+|===
+{% endfor -%}
+

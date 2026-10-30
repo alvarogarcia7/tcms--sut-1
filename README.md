@@ -86,9 +86,26 @@ against the release `SHA256SUMS`). The zip holds:
     all_tests.md
 ```
 
-The documents are AsciiDoc and Markdown (no PDF). They are rendered by `tpdg --single`
-with the tcms-cli result container schema and the templates in `templates/traceability/`.
-The job fails if any document cannot be generated or is empty.
+The documents are AsciiDoc and Markdown (no PDF). Each one is rendered in two `tpdg` runs
+(see "Chaining commands" in the TPDG README), with the templates in `vv-tcms/templates/`:
+
+1. `tpdg --multiple-by-type type vv-tcms/templates/verification_methods` renders one result
+   per test case (`test_cases_md`). The per-test inputs are the container's test results
+   with `type: result`.
+2. `tpdg --single` with `vv-tcms/templates/test_results/traceability_matrix.*.j2` renders the
+   requirement traceability matrix (`traceability_matrix_md`): one column per requirement,
+   with the tests that cover it (✓ pass, red ✗ fail) and PASS or FAIL.
+3. `tpdg --single` with `vv-tcms/templates/test_results/test_container_result.*.j2` renders
+   the outer document from the container with `test_cases_md` and
+   `traceability_matrix_md` added to its data.
+
+Before rendering, the job checks the test cases: they must match the tcms-schemas test-case
+schema, and each `requirement` must be listed in `vv-tcms/requirements.json` (the requirement IDs
+exported from StrictDoc or Jira). That list must match the tcms-schemas `requirement-list`
+schema (`scripts/validate-requirements.sh`).
+
+The job needs `yq` (YAML to JSON, from the apt package of the same name) and `jq`. The job
+fails if any document cannot be generated or is empty.
 
 ## Running locally
 

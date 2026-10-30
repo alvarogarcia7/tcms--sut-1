@@ -1,0 +1,137 @@
+= {{ title }}
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:chapter-label:
+:icons: font
+:imagesdir: images
+:source-highlighter: rouge
+
+[discrete]
+== Document Information
+
+*Project:* {{ project }}
+
+*Test Date:* {{ test_date }}
+
+*Environment:* {{ metadata.environment }}
+
+*Platform:* {{ metadata.platform }}
+
+*Executor:* {{ metadata.executor }}
+
+{% if metadata.execution_duration is defined %}*Execution Duration:* {{ metadata.execution_duration }} seconds
+{% endif %}
+
+<<<
+
+== Table of Contents
+
+toc::[]
+
+<<<
+
+== Executive Summary
+
+=== Test Execution Overview
+
+This document presents the results of test execution for {{ project }}.
+
+[cols="1,2", options="header"]
+|===
+| Metric
+| Value
+
+| Total Test Cases
+| {% if metadata.total_test_cases is defined %}{{ metadata.total_test_cases }}{% else %}{{ test_results | length }}{% endif %}
+
+| Passed Test Cases
+| {% if metadata.passed_test_cases is defined %}{{ metadata.passed_test_cases }}{% else %}{{ test_results | filter(attribute="overall_pass", value=true) | length }}{% endif %}
+
+| Failed Test Cases
+| {% if metadata.failed_test_cases is defined %}{{ metadata.failed_test_cases }}{% else %}{{ test_results | filter(attribute="overall_pass", value=false) | length }}{% endif %}
+
+| Not Executed Test Cases
+| {% if metadata.not_executed_test_cases is defined %}{{ metadata.not_executed_test_cases }}{% else %}0{% endif %}
+
+|===
+
+=== Success Rate
+
+{% set total = metadata.total_test_cases | default(value=test_results | length) -%}
+{% set passed = metadata.passed_test_cases | default(value=test_results | filter(attribute="overall_pass", value=true) | length) -%}
+{% if total > 0 -%}
+{% set pass_rate = passed * 100 / total -%}
+*Pass Rate:* {{ pass_rate | round(precision=2) }}%
+{% else -%}
+*Pass Rate:* N/A
+{% endif %}
+
+<<<
+
+= Detailed Test Results
+
+{{ test_cases_md }}
+
+<<<
+
+== Final Verification Verdict
+
+=== Overall Test Execution Status
+
+[cols="1,2", options="header"]
+|===
+| Verdict
+| Result
+
+| Overall Status
+| {% if metadata.failed_test_cases is defined %}{% if metadata.failed_test_cases == 0 %}✓ *PASS*{% else %}✗ *FAIL*{% endif %}{% else %}{% if test_results | filter(attribute="overall_pass", value=false) | length == 0 %}✓ *PASS*{% else %}✗ *FAIL*{% endif %}{% endif %}
+
+| Total Test Cases
+| {% if metadata.total_test_cases is defined %}{{ metadata.total_test_cases }}{% else %}{{ test_results | length }}{% endif %}
+
+| Passed
+| {% if metadata.passed_test_cases is defined %}{{ metadata.passed_test_cases }}{% else %}{{ test_results | filter(attribute="overall_pass", value=true) | length }}{% endif %}
+
+| Failed
+| {% if metadata.failed_test_cases is defined %}{{ metadata.failed_test_cases }}{% else %}{{ test_results | filter(attribute="overall_pass", value=false) | length }}{% endif %}
+
+| Not Executed
+| {% if metadata.not_executed_test_cases is defined %}{{ metadata.not_executed_test_cases }}{% else %}0{% endif %}
+
+|===
+
+{% set total = metadata.total_test_cases | default(value=test_results | length) -%}
+{% set passed = metadata.passed_test_cases | default(value=test_results | filter(attribute="overall_pass", value=true) | length) -%}
+{% set failed = metadata.failed_test_cases | default(value=test_results | filter(attribute="overall_pass", value=false) | length) -%}
+{% if failed == 0 and total > 0 -%}
+
+=== Conclusion
+
+All test cases have been executed successfully. The system under test meets the specified requirements.
+{% elif failed > 0 -%}
+
+=== Conclusion
+
+{{ failed }} test case(s) failed during execution. Review the detailed test results section for failure analysis and remediation actions.
+{% else -%}
+
+=== Conclusion
+
+No test cases were executed or results are inconclusive.
+{% endif %}
+
+<<<
+
+== Traceability Matrix
+
+{{ traceability_matrix_md }}
+
+<<<
+
+[discrete]
+== Copyright Notice
+
+(C) GSMA 2024. All rights reserved.
