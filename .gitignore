@@ -4,3 +4,5 @@
 /data
 # Local run output (published runs are copied into vv-tcms/)
 /build/
+# Traceability document built by scripts/traceability-document.sh
+/traceability-document.zip
