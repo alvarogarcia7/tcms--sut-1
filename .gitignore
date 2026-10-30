@@ -6,3 +6,4 @@
 /build/
 # Traceability document built by scripts/traceability-document.sh
 /traceability-document.zip
+__pycache__/
