@@ -43,6 +43,11 @@ test:
   # Same image as build-tcms: the tcms binaries need the newer glibc in it.
   image: rust:1.95
   needs: [build-tcms]
+  # Pipelines started by tcms-web for a traceability document run only build-tcms and
+  # traceability-document; every other pipeline is unchanged.
+  except:
+    variables:
+      - $TCMS_DOC_REQUEST_ID
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq bash ca-certificates > /dev/null
   script:
@@ -60,6 +65,11 @@ validate:
   needs:
     - job: test
       artifacts: true
+  # Pipelines started by tcms-web for a traceability document run only build-tcms and
+  # traceability-document; every other pipeline is unchanged.
+  except:
+    variables:
+      - $TCMS_DOC_REQUEST_ID
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
     - pip install -q --no-cache-dir pyyaml jsonschema
@@ -78,6 +88,8 @@ publish:
     - job: test
       artifacts: true
   rules:
+    - if: '$TCMS_DOC_REQUEST_ID'
+      when: never
     # Publish commits trigger a pipeline too (no [skip ci]); that one runs the tests but does
     # not publish again, so a run never starts a new run.
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE !~ /^vv-tcms: publish/'
@@ -114,6 +126,11 @@ gate:
   needs:
     - job: test
       artifacts: true
+  # Pipelines started by tcms-web for a traceability document run only build-tcms and
+  # traceability-document; every other pipeline is unchanged.
+  except:
+    variables:
+      - $TCMS_DOC_REQUEST_ID
   script:
     - |
       if grep -q 'verdict: fail' "build/runs/$TCMS_RUN_ID/test-run.yaml"; then
@@ -122,3 +139,30 @@ gate:
         exit 1
       fi
       echo "Run $TCMS_RUN_ID: all test cases passed"
+
+# Traceability document for Verdict TCMS (tcms-web, ORCH-045). tcms-web starts a pipeline with
+# the trigger API (POST /projects/455/trigger/pipeline) and the variables TCMS_DOC_REQUEST_ID,
+# TCMS_TESTS_COMMIT and TCMS_CODE_COMMIT, waits for it and downloads the artifact of this job
+# (GET /projects/455/jobs/<id>/artifacts, read_api). Runs only when TCMS_DOC_REQUEST_ID is set.
+# Stages 6 and 7 of tcms-cli run_acceptance_suite.sh on the run's execution logs in vv-tcms/.
+# The TPDG binary comes from the pinned TPDG release (project 350); see scripts/fetch-tpdg.sh
+# for the credential (masked TPDG_TOKEN, or the job token if project 350 allows sut-1).
+traceability-document:
+  stage: test
+  image: rust:1.95
+  needs: [build-tcms]
+  rules:
+    - if: '$TCMS_DOC_REQUEST_ID'
+  variables:
+    TPDG_VERSION: "v0.1.0-rc.1"
+    GIT_DEPTH: "0"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq curl unzip zip ca-certificates > /dev/null
+  script:
+    - scripts/fetch-tpdg.sh
+    - scripts/traceability-document.sh
+  artifacts:
+    name: traceability-document
+    paths:
+      - traceability-document.zip
+    expire_in: 7 days
