@@ -72,12 +72,14 @@ validate:
       - $TCMS_DOC_REQUEST_ID
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
-    - pip install -q --no-cache-dir pyyaml jsonschema
+    - pip install -q --no-cache-dir uv
   script:
     # The tcms-schemas token is scoped to that project only, so it is passed to this clone alone.
     - TCMS_READ_TOKEN="$TCMS_SCHEMAS_READ_TOKEN" scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
-    - scripts/validate-results.sh "build/runs/$TCMS_RUN_ID" tcms-schemas-src
-    - scripts/validate-testcases-schema.sh tcms-schemas-src
+    # The validator runs in the environment tcms-schemas locks in its uv.lock.
+    - uv sync --locked --project tcms-schemas-src
+    # Every YAML data file is checked against the schema it names in its `schema:` key.
+    - uv run --project tcms-schemas-src python scripts/validate-data-schemas.py tcms-schemas-src testcases/*.yml "build/runs/$TCMS_RUN_ID"/*.yaml
 
 # Appends the run to vv-tcms/ and pushes to the default branch. Runs only there, so merge
 # request pipelines never write results. The push uses a project access token.
