@@ -103,6 +103,24 @@ validate:
     - scripts/validate-testcases-schema.sh tcms-schemas-src
     - scripts/validate-requirements.sh tcms-schemas-src vv-tcms/requirements.json
 
+# The single end-to-end check of the run: schemas, record consistency, documents and their
+# verdicts (scripts/validate-chain.sh). It fails when any step of the chain fails.
+validate-chain:
+  stage: validate
+  image: rust:1.95
+  needs:
+    - job: build-tcms
+    - job: test
+      artifacts: true
+  except:
+    variables:
+      - $TCMS_DOC_REQUEST_ID
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq yq zip unzip git ca-certificates python3 python3-yaml python3-jsonschema > /dev/null
+  script:
+    - TCMS_READ_TOKEN="$TCMS_SCHEMAS_READ_TOKEN" scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
+    - scripts/validate-chain.sh "$TCMS_RUN_ID" tcms-schemas-src
+
 # Renders the documents of the run (test cases, traceability matrix, outer document) in
 # Markdown and AsciiDoc, checks them and keeps them as their own artifact.
 document:

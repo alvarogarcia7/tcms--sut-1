@@ -36,7 +36,9 @@ Runs are published on the default branch only. A published run is never modified
 3. **test**: validates the test cases, then runs them with `scripts/run-tests.sh`. The run
    (`build/runs/<RUN_ID>`) is the `test` artifact.
 4. **validate**: checks the run against the tcms-schemas JSON schemas, and the test cases and
-   requirements too.
+   requirements too. The `validate-chain` job runs `scripts/validate-chain.sh`, the single
+   end-to-end check: schemas, then the records against each other, then the documents
+   generated from the run, then each document's verdicts against `test-run.yaml`.
 5. **document**: renders the documents of the run in Markdown and AsciiDoc
    (`TCMS_DOC_FROM_BUILD=1 scripts/traceability-document.sh`) and checks them with
    `scripts/verify-documents.sh`. The documents are their own artifact (`documents`).
