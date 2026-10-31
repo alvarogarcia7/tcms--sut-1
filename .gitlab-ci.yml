@@ -14,7 +14,7 @@ variables:
   # ships a macOS binary, so the Linux tools are built here from the same tag).
   TCMS_CLI_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli.git
   # tcms-schemas revision used to validate the records.
-  TCMS_SCHEMAS_REF: main
+  TCMS_SCHEMAS_REF: requirement-list-schema
   TCMS_SCHEMAS_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-schemas.git
   TCMS_RUN_ID: "RUN-${CI_PIPELINE_ID}"
   TCMS_BUILD_ID: "${CI_COMMIT_SHORT_SHA}"
