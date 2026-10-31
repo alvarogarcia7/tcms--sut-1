@@ -1,6 +1,6 @@
 type: test_case
 schema: tcms/test-case.schema.v1.json
-requirement: SUT1_PASS
+requirement: SUT1-2
 item: 1
 tc: 1
 id: SUT1_PASS_001

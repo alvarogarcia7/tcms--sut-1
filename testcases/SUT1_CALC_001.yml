@@ -1,6 +1,6 @@
 type: test_case
 schema: tcms/test-case.schema.v1.json
-requirement: SUT1_CALC
+requirement: SUT1-1
 item: 1
 tc: 1
 id: SUT1_CALC_001

@@ -96,7 +96,8 @@ explicitly, so they behave the same on a workstation and in CI.
 ## 4. What the scripts run
 
 Test cases are YAML files in `testcases/`. Each one names its requirement
-(`requirement: SUT1_CALC`), and its steps run `src/sut1/*.sh`.
+(`requirement: SUT1-1`, the Jira key of the requirement), and its steps run `src/sut1/*.sh`.
+The requirements are Jira Stories; see `vv-tcms/integration-config.md`.
 
 | Step | Script | tcms-cli tool | Output |
 |---|---|---|---|
