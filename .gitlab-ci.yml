@@ -140,8 +140,11 @@ document:
     - scripts/verify-documents.sh build/traceability/30_documentation_source
   artifacts:
     name: documents
+    # The zip, and the same folder unzipped so the documents can be read in the GitLab web UI
+    # (Browse artifacts) without downloading the zip.
     paths:
       - traceability-document.zip
+      - build/traceability/30_documentation_source/
     expire_in: 1 week
 
 # Appends the run to vv-tcms/ and pushes to the default branch. Runs only there, so merge

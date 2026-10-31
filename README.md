@@ -126,6 +126,9 @@ fails if any document cannot be generated or is empty.
 
 ## Running locally
 
+How the tcms-cli tools are installed and configured is in
+[how to configure TCMSCLI.md](how%20to%20configure%20TCMSCLI.md).
+
 Put the tcms-cli binaries and source in `tools/` (both are gitignored):
 
 ```bash
