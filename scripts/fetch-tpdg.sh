@@ -5,7 +5,7 @@
 # Same logic as scripts/download-tpdg.sh of tcms-cli (tcms-40-glossary-impl).
 #
 # Environment:
-#   TPDG_VERSION     release tag (default v0.1.0-rc.1)
+#   TPDG_VERSION     release tag (default v0.1.0-rc.2)
 #   TPDG_PROJECT_ID  TPDG project id (default 350, b3/hardware-kms/test-plan-documentation-generator)
 #   TPDG_API         GitLab API root (default https://gitlab.crypto.tii.ae/api/v4)
 #   TPDG_DIR         install directory (default tools/tpdg)
@@ -15,7 +15,7 @@
 # Tokens are passed to curl on stdin (never on the command line) and never printed.
 set -euo pipefail
 
-TPDG_VERSION="${TPDG_VERSION:-v0.1.0-rc.1}"
+TPDG_VERSION="${TPDG_VERSION:-v0.1.0-rc.2}"
 TPDG_PROJECT_ID="${TPDG_PROJECT_ID:-350}"
 TPDG_API="${TPDG_API:-https://gitlab.crypto.tii.ae/api/v4}"
 TPDG_DIR="${TPDG_DIR:-tools/tpdg}"
@@ -72,7 +72,12 @@ echo "tpdg: checksum verified ($actual)"
 
 rm -rf "$TPDG_DIR"
 mkdir -p "$TPDG_DIR"
-unzip -oq "$TMP_DIR/$ZIP_NAME" tpdg -d "$TPDG_DIR"
+if command -v unzip >/dev/null 2>&1; then
+  unzip -oq "$TMP_DIR/$ZIP_NAME" tpdg -d "$TPDG_DIR"
+else
+  python3 -m zipfile -e "$TMP_DIR/$ZIP_NAME" "$TMP_DIR/extract"
+  mv "$TMP_DIR/extract/tpdg" "$TPDG_DIR/tpdg"
+fi
 chmod +x "$TPDG_DIR/tpdg"
 echo "$TPDG_VERSION" > "$TPDG_DIR/.version"
 "$TPDG_DIR/tpdg" --help | head -n 1 || true

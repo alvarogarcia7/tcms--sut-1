@@ -1,0 +1,12 @@
+# External tools the pipeline needs, one per line:
+#   name  origin  version  method  [binaries]
+# method "binary": the release binaries of origin at version, installed by scripts/fetch-*.sh.
+# method "source": a shallow clone of origin at version, built with cargo; the listed binaries
+#                  are copied from target/release into tools/<name>/.
+# The pipeline overrides a version with <NAME>_VERSION (the name in upper case, dashes as
+# underscores): TCMS_CLI_VERSION and TPDG_VERSION, set in .gitlab-ci.yml.
+#
+# tcms-cli  https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli  v0.0.2-rc2_2026-10-30  binary
+# tpdg  https://gitlab.crypto.tii.ae/b3/hardware-kms/test-plan-documentation-generator  v0.1.0-rc.2  source  tpdg
+tcms-cli  https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli  v0.0.2-rc2_2026-10-30  binary
+tpdg  https://gitlab.crypto.tii.ae/b3/hardware-kms/test-plan-documentation-generator  v0.1.0-rc.2  binary

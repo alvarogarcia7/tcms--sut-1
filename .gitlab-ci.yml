@@ -1,18 +1,30 @@
-# SUT 1 pipeline: builds tcms-cli at a pinned tag, runs the SUT 1 test cases with it,
-# validates the records against tcms-schemas and appends the run to vv-tcms/ on the
-# default branch.
+# SUT 1 pipeline. Stages:
+#   check        warns when a pinned dependency has a newer release (never fails)
+#   build-tcms   installs the dependencies listed in dependencies.txt (tcms-cli, TPDG)
+#   test         runs the SUT 1 test cases; the run is kept as the runs artifact
+#   validate     checks the run and the test cases against the tcms-schemas schemas
+#   document     renders the Markdown and AsciiDoc documents of the run; kept as the
+#                documents artifact
+#   publish      appends the run to vv-tcms/ on the default branch
+#   gate         fails the pipeline when a test case failed (last, so the run is published)
+#
+# Pipelines started by tcms-web for a traceability document (TCMS_DOC_REQUEST_ID set) run
+# build-tcms and traceability-document only.
 
 stages:
+  - check
   - build-tcms
   - test
   - validate
+  - document
   - publish
   - gate
 
 variables:
-  # tcms-cli release whose binaries are built from source (the v0.0.2-rc1 release only
-  # ships a macOS binary, so the Linux tools are built here from the same tag).
-  TCMS_CLI_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-cli.git
+  # Pinned dependency versions (the install script reads them; see dependencies.txt).
+  # Change them here to use another tcms-cli or TPDG release.
+  TCMS_CLI_VERSION: "v0.0.2-rc2_2026-10-30"
+  TPDG_VERSION: "v0.1.0-rc.2"
   # tcms-schemas revision used to validate the records.
   TCMS_SCHEMAS_REF: requirement-list-schema
   TCMS_SCHEMAS_URL: https://gitlab.crypto.tii.ae/int/test-case-management-system/tcms-schemas.git
@@ -21,21 +33,35 @@ variables:
   TCMS_TESTER: "${GITLAB_USER_LOGIN}"
   GIT_DEPTH: "20"
 
+# Warns about newer releases of the pinned dependencies. The warnings are printed for a reader
+# or an agent to act on: "WARNING:" lines name the dependency and the variable to change.
+version-check:
+  stage: check
+  image: python:3.12-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates > /dev/null
+  script:
+    - scripts/check-versions.sh | tee version-check.txt
+    - if grep -q '^WARNING:' version-check.txt; then echo "Dependency updates are available; see the WARNING lines above."; fi
+  artifacts:
+    when: always
+    paths:
+      - version-check.txt
+    expire_in: 1 week
+
 build-tcms:
   stage: build-tcms
   # rust:1.95 gives the glibc (2.39) the tcms-cli binaries need (see the test job).
   image: rust:1.95
-  variables:
-    # Tags tried in order; the first whose Linux x64 binaries install wins.
-    TCMS_CLI_TAGS: "v0.0.2-rc1-MR28-tcms40-glossary-impl_2 v0.0.2-rc1-MR28-tcms40-glossary-impl"
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip jq curl > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip zip jq curl ca-certificates python3 > /dev/null
   script:
-    - scripts/fetch-tcms-cli.sh
+    - scripts/install-deps.sh
   artifacts:
     paths:
       - tools/bin/
       - tools/tcms-cli/
+      - tools/tpdg/
     expire_in: 1 week
 
 test:
@@ -43,8 +69,6 @@ test:
   # Same image as build-tcms: the tcms binaries need the newer glibc in it.
   image: rust:1.95
   needs: [build-tcms]
-  # Pipelines started by tcms-web for a traceability document run only build-tcms and
-  # traceability-document; every other pipeline is unchanged.
   except:
     variables:
       - $TCMS_DOC_REQUEST_ID
@@ -54,9 +78,10 @@ test:
     - scripts/validate-yaml-testcases.sh
     - scripts/run-tests.sh
   artifacts:
+    # The run only: the documents are a separate artifact (document stage).
     when: always
     paths:
-      - build/
+      - build/runs/
     expire_in: 1 week
 
 validate:
@@ -65,8 +90,6 @@ validate:
   needs:
     - job: test
       artifacts: true
-  # Pipelines started by tcms-web for a traceability document run only build-tcms and
-  # traceability-document; every other pipeline is unchanged.
   except:
     variables:
       - $TCMS_DOC_REQUEST_ID
@@ -78,6 +101,30 @@ validate:
     - TCMS_READ_TOKEN="$TCMS_SCHEMAS_READ_TOKEN" scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
     - scripts/validate-results.sh "build/runs/$TCMS_RUN_ID" tcms-schemas-src
     - scripts/validate-testcases-schema.sh tcms-schemas-src
+    - scripts/validate-requirements.sh tcms-schemas-src vv-tcms/requirements.json
+
+# Renders the documents of the run (test cases, traceability matrix, outer document) in
+# Markdown and AsciiDoc, checks them and keeps them as their own artifact.
+document:
+  stage: document
+  image: rust:1.95
+  needs:
+    - job: build-tcms
+    - job: test
+      artifacts: true
+  except:
+    variables:
+      - $TCMS_DOC_REQUEST_ID
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq yq curl unzip zip ca-certificates > /dev/null
+  script:
+    - TCMS_DOC_FROM_BUILD=1 scripts/traceability-document.sh
+    - scripts/verify-documents.sh build/traceability/30_documentation_source
+  artifacts:
+    name: documents
+    paths:
+      - traceability-document.zip
+    expire_in: 1 week
 
 # Appends the run to vv-tcms/ and pushes to the default branch. Runs only there, so merge
 # request pipelines never write results. The push uses a project access token.
@@ -126,8 +173,6 @@ gate:
   needs:
     - job: test
       artifacts: true
-  # Pipelines started by tcms-web for a traceability document run only build-tcms and
-  # traceability-document; every other pipeline is unchanged.
   except:
     variables:
       - $TCMS_DOC_REQUEST_ID
@@ -144,22 +189,19 @@ gate:
 # the trigger API (POST /projects/455/trigger/pipeline) and the variables TCMS_DOC_REQUEST_ID,
 # TCMS_TESTS_COMMIT and TCMS_CODE_COMMIT, waits for it and downloads the artifact of this job
 # (GET /projects/455/jobs/<id>/artifacts, read_api). Runs only when TCMS_DOC_REQUEST_ID is set.
-# Stages 6 and 7 of tcms-cli run_acceptance_suite.sh on the run's execution logs in vv-tcms/.
-# The TPDG binary comes from the pinned TPDG release (project 350); see scripts/fetch-tpdg.sh
-# for the credential (masked TPDG_TOKEN, or the job token if project 350 allows sut-1).
+# The documents are built from the run in vv-tcms/ at TCMS_TESTS_COMMIT, with the tools from
+# build-tcms (the TPDG credential is read there; see scripts/fetch-tpdg.sh).
 traceability-document:
-  stage: test
+  stage: document
   image: rust:1.95
   needs: [build-tcms]
   rules:
     - if: '$TCMS_DOC_REQUEST_ID'
   variables:
-    TPDG_VERSION: "v0.1.0-rc.1"
     GIT_DEPTH: "0"
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends jq yq curl unzip zip ca-certificates python3 python3-yaml python3-jsonschema > /dev/null
   script:
-    - scripts/fetch-tpdg.sh
     # The requirement of each test case comes from the test case file, so the test cases are
     # checked against the tcms-schemas test-case schema before any document is rendered.
     - TCMS_READ_TOKEN="$TCMS_SCHEMAS_READ_TOKEN" scripts/clone-repo.sh "$TCMS_SCHEMAS_URL" "$TCMS_SCHEMAS_REF" tcms-schemas-src
@@ -167,6 +209,7 @@ traceability-document:
     # Every test case requirement must be an ID exported from StrictDoc or Jira.
     - scripts/validate-requirements.sh tcms-schemas-src vv-tcms/requirements.json
     - scripts/traceability-document.sh
+    - scripts/verify-documents.sh build/traceability/30_documentation_source
   artifacts:
     name: traceability-document
     paths:

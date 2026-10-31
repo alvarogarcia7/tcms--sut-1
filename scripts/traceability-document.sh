@@ -39,12 +39,14 @@ cd "$REPO_ROOT"
 # shellcheck source=scripts/tcms-env.sh
 . "$SCRIPT_DIR/tcms-env.sh"
 
-REQUEST_ID="${TCMS_DOC_REQUEST_ID:?TCMS_DOC_REQUEST_ID is not set (the job runs only for tcms-web requests)}"
+REQUEST_ID="${TCMS_DOC_REQUEST_ID:-pipeline-${CI_PIPELINE_ID:-local}}"
 TPDG_BIN="${TEST_PLAN_DOC_GEN:-$REPO_ROOT/tools/tpdg/tpdg}"
 TEMPLATE_DIR="$REPO_ROOT/vv-tcms/templates/test_results"
 VERIFICATION_METHODS_DIR="$REPO_ROOT/vv-tcms/templates/verification_methods"
 CONTAINER_SCHEMA="$TEMPLATE_DIR/container_schema.json"
 HOST="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname)"
+PLATFORM="$(uname -s) $(uname -m)"
+EXECUTOR="tcms-cli"
 
 WORK_DIR="$REPO_ROOT/build/traceability"
 SOURCE_DIR="$WORK_DIR/source"
@@ -72,21 +74,29 @@ if [ -n "${TCMS_TESTS_COMMIT:-}" ]; then
     warnings+=("TCMS_TESTS_COMMIT $TCMS_TESTS_COMMIT is not a commit of sut-1; used the pipeline commit $tests_commit")
   fi
 fi
-git archive "$tests_commit" testcases vv-tcms | tar -x -C "$SOURCE_DIR"
-TEST_CASES_DIR="$SOURCE_DIR/testcases"
+if [ -n "${TCMS_DOC_FROM_BUILD:-}" ]; then
+  # Pipeline mode: the run the test job just wrote to build/runs/ and the working tree.
+  run_id="${TCMS_RUN_ID:?TCMS_RUN_ID is not set (TCMS_DOC_FROM_BUILD needs the run to document)}"
+  EXECUTION_LOGS_DIR="$REPO_ROOT/build/runs/$run_id/logs"
+  TEST_CASES_DIR="$REPO_ROOT/testcases"
+else
+  # Request mode: testcases/ and vv-tcms/ at the requested commit.
+  git archive "$tests_commit" testcases vv-tcms | tar -x -C "$SOURCE_DIR"
+  TEST_CASES_DIR="$SOURCE_DIR/testcases"
 
-run_id="${TCMS_DOC_RUN_ID:-}"
-if [ -z "$run_id" ]; then
-  while read -r candidate; do
-    if compgen -G "$SOURCE_DIR/vv-tcms/runs/$candidate/logs/*.json" > /dev/null; then
-      run_id="$candidate"
-      break
-    fi
-  done < <(jq -r '.run_id' "$SOURCE_DIR/vv-tcms/index.jsonl" | tac)
+  run_id="${TCMS_DOC_RUN_ID:-}"
+  if [ -z "$run_id" ]; then
+    while read -r candidate; do
+      if compgen -G "$SOURCE_DIR/vv-tcms/runs/$candidate/logs/*.json" > /dev/null; then
+        run_id="$candidate"
+        break
+      fi
+    done < <(jq -r '.run_id' "$SOURCE_DIR/vv-tcms/index.jsonl" | tac)
+  fi
+  EXECUTION_LOGS_DIR="$SOURCE_DIR/vv-tcms/runs/$run_id/logs"
 fi
-EXECUTION_LOGS_DIR="$SOURCE_DIR/vv-tcms/runs/$run_id/logs"
 if [ -z "$run_id" ] || ! compgen -G "$EXECUTION_LOGS_DIR/*.json" > /dev/null; then
-  echo "error: no execution logs for run '${run_id:-none}' in vv-tcms/ at $tests_commit" >&2
+  echo "error: no execution logs for run '${run_id:-none}' in $EXECUTION_LOGS_DIR" >&2
   exit 1
 fi
 build_id="${TCMS_CODE_COMMIT:-$tests_commit}"
@@ -165,6 +175,7 @@ for log_file in "$EXECUTION_LOGS_DIR"/*.json; do
     --title "Acceptance Test Results - $(basename "$test_case_yaml")" \
     --project "Test Case Manager - Acceptance Suite" \
     --environment "Automated Test Environment - $HOST" \
+    --platform "$PLATFORM" --executor "$EXECUTOR" \
     --test-case "$test_case_id" \
     --log "$log_file" \
     --test-case-dir "$TEST_CASES_DIR" \
@@ -191,6 +202,7 @@ run_tool "consolidated/all_tests_container.yaml" "$VERIFIER" \
   --title "Acceptance Test Suite - All Test Cases" \
   --project "Test Case Manager - Acceptance Suite" \
   --environment "Automated Test Environment - $HOST" \
+  --platform "$PLATFORM" --executor "$EXECUTOR" \
   --output "$consolidated_container" \
   --schema "$RESULT_SCHEMA" \
   --run-id "$run_id" --build-id "$build_id" --no-test-run \
