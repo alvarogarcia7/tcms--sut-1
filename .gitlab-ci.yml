@@ -259,21 +259,22 @@ pdf:
     - job: traceability-document
       artifacts: true
       optional: true
+  # Kroki and its renderers, pinned to one release (the same version for all five images).
   services:
-    - name: yuzutech/kroki:latest
+    - name: yuzutech/kroki:0.33.0
       alias: kroki
       variables:
         KROKI_MERMAID_HOST: mermaid
         KROKI_BPMN_HOST: bpmn
         KROKI_EXCALIDRAW_HOST: excalidraw
         KROKI_DIAGRAMSNET_HOST: diagramsnet
-    - name: yuzutech/kroki-mermaid:latest
+    - name: yuzutech/kroki-mermaid:0.33.0
       alias: mermaid
-    - name: yuzutech/kroki-bpmn:latest
+    - name: yuzutech/kroki-bpmn:0.33.0
       alias: bpmn
-    - name: yuzutech/kroki-excalidraw:latest
+    - name: yuzutech/kroki-excalidraw:0.33.0
       alias: excalidraw
-    - name: yuzutech/kroki-diagramsnet:latest
+    - name: yuzutech/kroki-diagramsnet:0.33.0
       alias: diagramsnet
   variables:
     KROKI_SERVER_URL: http://kroki:8000
@@ -291,5 +292,5 @@ pdf:
     paths:
       # The zip with the sources and the PDFs, and the same folder unzipped for the GitLab web UI.
       - traceability-document.zip
-      - build/pdf/unpacked/30_documentation_source/
+      - build/pdf/package/
     expire_in: 7 days

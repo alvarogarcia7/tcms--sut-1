@@ -161,18 +161,51 @@ if [ "$pdf_count" -eq 0 ]; then
   exit 1
 fi
 
-# The PDFs are listed in the manifest, then the sources and the PDFs go back into the zip.
+# --- Package: the layout of the archive ------------------------------------------------------
+#   MANIFEST.md
+#   all_tests.adoc, all_tests.adoc.pdf, all_tests.md, all_tests.md.pdf    (consolidated)
+#   individual/asciidoc/<TC>.adoc.pdf    individual/markdown/<TC>.md.pdf  (one per test case)
+#   data/asciidoc/<TC>.adoc              data/markdown/<TC>.md            (sources)
+#   other/                               everything else (e.g. all_tests_container.yaml)
+PACKAGE_DIR="$WORK_DIR/package"
+rm -rf "$PACKAGE_DIR"
+mkdir -p "$PACKAGE_DIR/individual/asciidoc" "$PACKAGE_DIR/individual/markdown" \
+  "$PACKAGE_DIR/data/asciidoc" "$PACKAGE_DIR/data/markdown" "$PACKAGE_DIR/other"
+
+cp "$DOC_DIR/consolidated/all_tests.adoc" "$DOC_DIR/consolidated/all_tests.md" \
+  "$DOC_DIR/pdf/consolidated/all_tests.adoc.pdf" "$DOC_DIR/pdf/consolidated/all_tests.md.pdf" \
+  "$PACKAGE_DIR/"
+cp "$DOC_DIR"/pdf/asciidoc/*.pdf "$PACKAGE_DIR/individual/asciidoc/"
+cp "$DOC_DIR"/pdf/markdown/*.pdf "$PACKAGE_DIR/individual/markdown/"
+cp "$DOC_DIR"/asciidoc/*.adoc "$PACKAGE_DIR/data/asciidoc/"
+cp "$DOC_DIR"/markdown/*.md "$PACKAGE_DIR/data/markdown/"
+
+# Everything else of the documentation folder goes to other/ (the manifest is handled below).
+while IFS= read -r -d '' other; do
+  cp "$other" "$PACKAGE_DIR/other/"
+done < <(find "$DOC_DIR" -type f ! -name MANIFEST.md \
+  ! -path "$DOC_DIR/pdf/*" ! -path "$DOC_DIR/asciidoc/*" ! -path "$DOC_DIR/markdown/*" \
+  ! -name all_tests.adoc ! -name all_tests.md -print0)
+
+# The manifest keeps its content; the file list is rewritten for this layout.
+sed '/^## Files$/,$d' "$DOC_DIR/MANIFEST.md" > "$PACKAGE_DIR/MANIFEST.md"
 {
+  echo "## Files"
   echo
-  echo "## PDF files"
+  (cd "$PACKAGE_DIR" && find . -type f ! -name MANIFEST.md | sort | sed 's|^\./|- |')
+  echo
+  echo "## Layout"
+  echo
+  echo "- Top level: the consolidated documents (all test cases) with their PDFs."
+  echo "- individual/: one PDF per test case, AsciiDoc and Markdown."
+  echo "- data/: the AsciiDoc and Markdown sources of the individual documents."
+  echo "- other/: the remaining files of the documentation folder."
   echo
   echo "PDFs are rendered from the AsciiDoc and Markdown documents by the pdf job (scripts/render-pdfs.sh)."
-  echo
-  (cd "$DOC_DIR" && find pdf -type f -name '*.pdf' | sort | sed 's|^|- |')
-} >> "$DOC_DIR/MANIFEST.md"
+} >> "$PACKAGE_DIR/MANIFEST.md"
 
 rm -f "$ZIP"
-(cd "$SOURCES_ROOT" && zip -qr "$ZIP" 30_documentation_source)
+(cd "$PACKAGE_DIR" && zip -qr "$ZIP" .)
 echo "Produced ${ZIP#"$REPO_ROOT"/} with $pdf_count PDF(s):"
 unzip -l "$ZIP"
 
