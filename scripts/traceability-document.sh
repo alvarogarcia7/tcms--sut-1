@@ -16,7 +16,8 @@
 # Each document is rendered in two tpdg runs (README "Chaining commands"): first the test
 # cases (test_cases_md) and the requirement traceability matrix (traceability_matrix_md), then
 # the outer document with both in its data. The templates are the TPDG ones in
-# vv-tcms/templates/ (verification_methods/, test_results/). PDF is not produced.
+# vv-tcms/templates/ (verification_methods/, test_results/). PDFs are rendered afterwards by
+# the pdf job (scripts/render-pdfs.sh), which adds them to the zip.
 #
 # Environment:
 #   TCMS_DOC_REQUEST_ID  required: the tcms-web request id, written to the manifest
@@ -234,7 +235,7 @@ done < <(find "$REPORTS_DIR" -type f -empty -print0)
   echo "Stage 6 (Documentation): asciidoc/ and markdown/, one report per test case."
   echo "Stage 7 (Consolidated Docs): consolidated/, all test cases of the run in one document."
   echo "Each document has the test cases and a requirement traceability matrix."
-  echo "PDF is not produced."
+  echo "PDFs are not rendered here; the pdf job adds them (scripts/render-pdfs.sh)."
   if [ ${#warnings[@]} -gt 0 ]; then
     echo
     echo "## Warnings"
