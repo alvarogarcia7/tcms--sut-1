@@ -5,11 +5,13 @@
 #   validate     checks the run and the test cases against the tcms-schemas schemas
 #   document     renders the Markdown and AsciiDoc documents of the run; kept as the
 #                documents artifact
+#   pdf          renders the AsciiDoc and Markdown documents to PDF and packs the sources and
+#                the PDFs into traceability-document.zip (kroki service for diagrams)
 #   publish      appends the run to vv-tcms/ on the default branch
 #   gate         fails the pipeline when a test case failed (last, so the run is published)
 #
 # Pipelines started by tcms-web for a traceability document (TCMS_DOC_REQUEST_ID set) run
-# build-tcms and traceability-document only.
+# build-tcms, traceability-document and pdf only.
 
 stages:
   - check
@@ -17,6 +19,7 @@ stages:
   - test
   - validate
   - document
+  - pdf
   - publish
   - gate
 
@@ -238,4 +241,55 @@ traceability-document:
     name: traceability-document
     paths:
       - traceability-document.zip
+    expire_in: 7 days
+
+# Renders the AsciiDoc and Markdown documents to PDF and packs the sources and the PDFs into
+# traceability-document.zip. Same tools as the docker-compose setup of
+# b3/hardware-kms/yet-other-document-authoring-tool: asciidoctor-pdf with asciidoctor-diagram
+# and asciidoctor-kroki, and the kroki services (kroki and its diagram renderers, as in that
+# compose file). The input is the zip of the document job (normal pipelines) or of the
+# traceability-document job (tcms-web requests); exactly one of the two exists in a pipeline.
+pdf:
+  stage: pdf
+  image: asciidoctor/docker-asciidoctor:latest
+  needs:
+    - job: document
+      artifacts: true
+      optional: true
+    - job: traceability-document
+      artifacts: true
+      optional: true
+  services:
+    - name: yuzutech/kroki:latest
+      alias: kroki
+      variables:
+        KROKI_MERMAID_HOST: mermaid
+        KROKI_BPMN_HOST: bpmn
+        KROKI_EXCALIDRAW_HOST: excalidraw
+        KROKI_DIAGRAMSNET_HOST: diagramsnet
+    - name: yuzutech/kroki-mermaid:latest
+      alias: mermaid
+    - name: yuzutech/kroki-bpmn:latest
+      alias: bpmn
+    - name: yuzutech/kroki-excalidraw:latest
+      alias: excalidraw
+    - name: yuzutech/kroki-diagramsnet:latest
+      alias: diagramsnet
+  variables:
+    KROKI_SERVER_URL: http://kroki:8000
+  before_script:
+    # Chromium renders the Markdown documents; pandoc converts them to HTML first.
+    - apk add --no-cache -q bash curl zip unzip pandoc chromium font-noto poppler-utils > /dev/null
+    - |
+      if ! gem list -i asciidoctor-kroki > /dev/null 2>&1 || ! gem list -i asciidoctor-diagram > /dev/null 2>&1; then
+        gem install --no-document asciidoctor-diagram asciidoctor-kroki
+      fi
+  script:
+    - scripts/render-pdfs.sh traceability-document.zip
+  artifacts:
+    name: traceability-document-pdf
+    paths:
+      # The zip with the sources and the PDFs, and the same folder unzipped for the GitLab web UI.
+      - traceability-document.zip
+      - build/pdf/unpacked/30_documentation_source/
     expire_in: 7 days
