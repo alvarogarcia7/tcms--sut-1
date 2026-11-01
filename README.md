@@ -35,8 +35,11 @@ Runs are published on the default branch only. A published run is never modified
    `scripts/install-deps.sh` (tcms-cli binaries and schemas, TPDG binary).
 3. **test**: validates the test cases, then runs them with `scripts/run-tests.sh`. The run
    (`build/runs/<RUN_ID>`) is the `test` artifact.
-4. **validate**: checks the run against the tcms-schemas JSON schemas, and the test cases and
-   requirements too. The `validate-chain` job runs `scripts/validate-chain.sh`, the single
+4. **validate**: checks every YAML data file (test cases and the run's `test-run.yaml` and
+   `verification-results.yaml`) against the schema it names in its `schema:` key, taken from
+   the latest `main` of tcms-schemas. A file without a `schema:` key, a schema that is not in
+   tcms-schemas, or a file that does not match its schema fails the pipeline. The requirement
+   list is checked too. The `validate-chain` job runs `scripts/validate-chain.sh`, the single
    end-to-end check: schemas, then the records against each other, then the documents
    generated from the run, then each document's verdicts against `test-run.yaml`.
 5. **document**: renders the documents of the run in Markdown and AsciiDoc
@@ -138,7 +141,7 @@ cp -R /path/to/tcms-cli/schemas /path/to/tcms-cli/data tools/tcms-cli/
 
 scripts/validate-yaml-testcases.sh
 TCMS_RUN_ID=RUN-LOCAL-1 scripts/run-tests.sh
-scripts/validate-results.sh build/runs/RUN-LOCAL-1 /path/to/tcms-schemas
+uv run --project /path/to/tcms-schemas python scripts/validate-data-schemas.py /path/to/tcms-schemas testcases/*.yml build/runs/RUN-LOCAL-1/*.yaml
 ```
 
 `scripts/publish-results.sh RUN-LOCAL-1` copies the run into `vv-tcms/`. Commit that by

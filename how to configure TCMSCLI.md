@@ -103,7 +103,7 @@ The requirements are Jira Stories; see `vv-tcms/integration-config.md`.
 |---|---|---|---|
 | Validate test cases | `scripts/validate-yaml-testcases.sh` | `validate-yaml` | pass/fail per file against `test-case-main.schema.json` |
 | Run tests | `scripts/run-tests.sh` | `test-executor execute` per test case, then `verifier -f` | `build/runs/<RUN_ID>/` |
-| Check the records | `scripts/validate-results.sh` | none (python jsonschema) | pass/fail against tcms-schemas |
+| Check the data files | `scripts/validate-data-schemas.py` | none (python3 with PyYAML and jsonschema) | pass/fail per file against the schema it names, in tcms-schemas |
 | Check the chain | `scripts/validate-chain.sh` | all of the above, plus document generation | pass/fail, from the schemas to the document |
 | Documents | `scripts/traceability-document.sh` | `verifier` plus TPDG | `traceability-document.zip` |
 
@@ -112,7 +112,7 @@ Run locally, from the repo root:
 ```bash
 scripts/validate-yaml-testcases.sh
 TCMS_RUN_ID=RUN-LOCAL-1 scripts/run-tests.sh
-scripts/validate-results.sh build/runs/RUN-LOCAL-1 /path/to/tcms-schemas
+python3 scripts/validate-data-schemas.py /path/to/tcms-schemas testcases/*.yml build/runs/RUN-LOCAL-1/*.yaml
 TCMS_DOC_FROM_BUILD=1 TCMS_RUN_ID=RUN-LOCAL-1 scripts/traceability-document.sh
 scripts/validate-chain.sh RUN-LOCAL-1 /path/to/tcms-schemas
 ```

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Single end-to-end check of a test run, from the schemas to the documents:
-#   1. test cases match the tcms-schemas test-case schema
+#   1. test cases match the tcms-schemas test-case schema (scripts/validate-data-schemas.py)
 #   2. requirements.json matches the tcms-schemas requirement-list schema, and every test
 #      case requirement is listed in it
 #   3. the run matches the tcms-schemas test-run and verification-result schemas
+#      (scripts/validate-data-schemas.py)
 #   4. the records agree: one result per test case in testcases/, and each verdict in
 #      test-run.yaml matches the step results in verification-results.yaml
 #   5. the documents are generated from the run and pass scripts/verify-documents.sh
@@ -34,13 +35,13 @@ DOCS_DIR="build/traceability/30_documentation_source"
 step() { echo; echo "== $1"; }
 
 step "1. test cases against the test-case schema"
-scripts/validate-testcases-schema.sh "$SCHEMAS_DIR"
+python3 scripts/validate-data-schemas.py "$SCHEMAS_DIR" testcases/*.yml
 
 step "2. requirements against the requirement-list schema"
 scripts/validate-requirements.sh "$SCHEMAS_DIR" vv-tcms/requirements.json
 
 step "3. run records against the tcms-schemas schemas"
-scripts/validate-results.sh "$RUN_DIR" "$SCHEMAS_DIR"
+python3 scripts/validate-data-schemas.py "$SCHEMAS_DIR" "$RUN_DIR"/*.yaml
 
 step "4. run records agree with each other"
 python3 -I - "$RUN_DIR" testcases <<'PY'
