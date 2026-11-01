@@ -27,6 +27,8 @@ variables:
   # Pinned dependency versions (the install script reads them; see dependencies.txt).
   # Change them here to use another tcms-cli or TPDG release.
   TCMS_CLI_VERSION: "v0.1.0-rc1_2026-11-02"
+  # The fetch script tries TCMS_CLI_TAGS (default: old tags that no longer exist); point it at the pinned version.
+  TCMS_CLI_TAGS: "$TCMS_CLI_VERSION"
   TPDG_VERSION: "v0.1.0-rc.2"
   # tcms-schemas revision used to validate the records.
   TCMS_SCHEMAS_REF: requirement-list-schema
