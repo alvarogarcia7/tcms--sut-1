@@ -1,0 +1,10 @@
+# Container configuration of the SUT 1 verification results (tcms-cli verifier --config).
+# Fixed for SUT 1. Per run and per machine values stay in the environment and on the command
+# line: TCMS_RUN_ID, TCMS_BUILD_ID, TCMS_TESTER, TCMS_REVIEWER and --platform. A flag overrides
+# the value here (for example the per-test title of the traceability documents).
+type: container_config
+schema: tcms/container-config.schema.v1.json
+title: SUT 1 verification results
+project: SUT 1
+environment: SUT 1 (bash)
+executor: tcms-cli

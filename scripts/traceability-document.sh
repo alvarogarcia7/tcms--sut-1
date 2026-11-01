@@ -44,9 +44,7 @@ TPDG_BIN="${TEST_PLAN_DOC_GEN:-$REPO_ROOT/tools/tpdg/tpdg}"
 TEMPLATE_DIR="$REPO_ROOT/vv-tcms/templates/test_results"
 VERIFICATION_METHODS_DIR="$REPO_ROOT/vv-tcms/templates/verification_methods"
 CONTAINER_SCHEMA="$TEMPLATE_DIR/container_schema.json"
-HOST="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname)"
 PLATFORM="$(uname -s) $(uname -m)"
-EXECUTOR="tcms-cli"
 
 WORK_DIR="$REPO_ROOT/build/traceability"
 SOURCE_DIR="$WORK_DIR/source"
@@ -79,10 +77,12 @@ if [ -n "${TCMS_DOC_FROM_BUILD:-}" ]; then
   run_id="${TCMS_RUN_ID:?TCMS_RUN_ID is not set (TCMS_DOC_FROM_BUILD needs the run to document)}"
   EXECUTION_LOGS_DIR="$REPO_ROOT/build/runs/$run_id/logs"
   TEST_CASES_DIR="$REPO_ROOT/testcases"
+  CONTAINER_CONFIG="$REPO_ROOT/vv-tcms/container-config.yaml"
 else
   # Request mode: testcases/ and vv-tcms/ at the requested commit.
   git archive "$tests_commit" testcases vv-tcms | tar -x -C "$SOURCE_DIR"
   TEST_CASES_DIR="$SOURCE_DIR/testcases"
+  CONTAINER_CONFIG="$SOURCE_DIR/vv-tcms/container-config.yaml"
 
   run_id="${TCMS_DOC_RUN_ID:-}"
   if [ -z "$run_id" ]; then
@@ -172,10 +172,9 @@ for log_file in "$EXECUTION_LOGS_DIR"/*.json; do
   fi
   container_file="$VERIFICATION_RESULTS_DIR/${test_case_id}_container.yaml"
   run_tool "${test_case_id}_container.yaml" "$VERIFIER" \
+    --config "$CONTAINER_CONFIG" \
     --title "Acceptance Test Results - $(basename "$test_case_yaml")" \
-    --project "Test Case Manager - Acceptance Suite" \
-    --environment "Automated Test Environment - $HOST" \
-    --platform "$PLATFORM" --executor "$EXECUTOR" \
+    --platform "$PLATFORM" \
     --test-case "$test_case_id" \
     --log "$log_file" \
     --test-case-dir "$TEST_CASES_DIR" \
@@ -199,10 +198,9 @@ consolidated_container="$REPORTS_DIR/consolidated/all_tests_container.yaml"
 run_tool "consolidated/all_tests_container.yaml" "$VERIFIER" \
   --folder "$EXECUTION_LOGS_DIR" \
   --test-case-dir "$TEST_CASES_DIR" \
+  --config "$CONTAINER_CONFIG" \
   --title "Acceptance Test Suite - All Test Cases" \
-  --project "Test Case Manager - Acceptance Suite" \
-  --environment "Automated Test Environment - $HOST" \
-  --platform "$PLATFORM" --executor "$EXECUTOR" \
+  --platform "$PLATFORM" \
   --output "$consolidated_container" \
   --schema "$RESULT_SCHEMA" \
   --run-id "$run_id" --build-id "$build_id" --no-test-run \

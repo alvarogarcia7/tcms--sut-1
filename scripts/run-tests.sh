@@ -28,7 +28,6 @@ GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 RUN_ID="${TCMS_RUN_ID:-RUN-$(date -u +%Y%m%dT%H%M%SZ)-$GIT_SHA}"
 BUILD_ID="${TCMS_BUILD_ID:-$GIT_SHA}"
 TESTER="${TCMS_TESTER:-${USER:-ci}}"
-ENVIRONMENT="SUT 1 (bash) on $(uname -s) $(uname -m)"
 PLATFORM="$(uname -s) $(uname -m)"
 
 RUN_DIR="$REPO_ROOT/build/runs/$RUN_ID"
@@ -61,21 +60,19 @@ done
 # Verify all logs in one run and write the tcms-schemas records. Paths are relative to the
 # repo root so the references stored in the records are portable.
 REL_RUN_DIR="build/runs/$RUN_ID"
+# Title, project, environment and executor come from the container config (vv-tcms/).
 verifier_args=(
   -f "$REL_RUN_DIR/logs"
   -d testcases
   -F yaml
   -o "$REL_RUN_DIR/verification-results.yaml"
+  --config vv-tcms/container-config.yaml
   --test-run "$REL_RUN_DIR/test-run.yaml"
   --schema "$RESULT_SCHEMA"
-  --title "SUT 1 verification results"
-  --project "SUT 1"
   --run-id "$RUN_ID"
   --build-id "$BUILD_ID"
   --tester "$TESTER"
-  --environment "$ENVIRONMENT"
   --platform "$PLATFORM"
-  --executor "tcms-cli $(basename "$TCMS_SRC_DIR")"
 )
 if [ -n "${TCMS_REVIEWER:-}" ]; then
   verifier_args+=(--reviewer "$TCMS_REVIEWER")

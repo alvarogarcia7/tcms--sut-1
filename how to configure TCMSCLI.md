@@ -44,6 +44,18 @@ scripts/install-deps.sh --list          # what will be installed, one line per d
 scripts/install-deps.sh                 # download and install everything in dependencies.txt
 ```
 
+### Container configuration (`vv-tcms/container-config.yaml`)
+
+The title, project, environment and executor of the verification results and the documents
+come from `vv-tcms/container-config.yaml`, which `verifier --config` reads. Its schema is
+`tcms/container-config.schema.v1.json` (tcms-cli). The per-run and per-machine values stay out of
+the file: `TCMS_RUN_ID`, `TCMS_BUILD_ID`, `TCMS_TESTER` and `--platform` (set by the scripts).
+The per-test title of the traceability documents overrides `title` on the command line.
+
+Because the title, project and environment now come from the file, the documents no longer name
+the host ("Automated Test Environment - <host>") or the old project name ("Test Case Manager -
+Acceptance Suite"). The project is "SUT 1" in the records and in the documents.
+
 `scripts/install-deps.sh` reads `dependencies.txt`:
 
 ```
